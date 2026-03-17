@@ -1,16 +1,64 @@
+# === Android Studio / IntelliJ ===
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.idea/
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
 local.properties
 
+# === OS-specific ===
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# === Android ===
+# Gradle build output
+*/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration files (keystore, environment vars)
+*.keystore
+*.jks
+
+# === Logs and temp ===
+*.log
+*.tmp
+*.temp
+
+# === Jetpack Compose Preview cache ===
+.idea/preview/
+
+# === Kotlin/Java ===
+out/
+bin/
+
+# === NDK / CMake ===
+obj/
+cmake-build-*/
+
+# === Misc ===
+*.swp
+*.bak
+*.orig
+*.rej
+
+# === Android Studio navigation editor and assets ===
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# === Optional ===
+# Uncomment if you use VS Code for editing sometimes
+# .vscode/
+
+# === Firebase configuration file ===
+app/src/google-services.json
+app/google-services.json
