@@ -11,7 +11,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import es.ulpgc.kippo.viewmodel.RegisterViewModel
 
 @Composable
-fun RegisterScreen(viewModel: RegisterViewModel = viewModel()) {
+fun RegisterScreen(
+    viewModel: RegisterViewModel = viewModel(),
+    onRegisterSuccess: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {}
+) {
     val email = viewModel.email.value
     val password = viewModel.password.value
     val username = viewModel.username.value
@@ -110,6 +114,11 @@ fun RegisterScreen(viewModel: RegisterViewModel = viewModel()) {
             )
         }
 
+        TextButton(onClick = onNavigateToLogin) {
+            Text("¿Ya tienes cuenta? Inicia sesión")
+        }
+
+
         if (error != null) {
             Text(
                 text = error,
@@ -124,9 +133,8 @@ fun RegisterScreen(viewModel: RegisterViewModel = viewModel()) {
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 8.dp)
             )
+            onRegisterSuccess()
         }
-
-        
 
         Spacer(modifier = Modifier.height(16.dp))
 

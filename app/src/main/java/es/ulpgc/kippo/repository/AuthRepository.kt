@@ -1,22 +1,61 @@
 package es.ulpgc.kippo.repository
 
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 
 
 /**
  * Repositorio para operaciones de autenticación en Firebase.
- * Proporciona funciones para registrar y loguear usuarios y devuelve
- * mensajes de error amigables cuando sea posible.
+ * Ahora también crea el documento del usuario en Firestore en la colección `users`.
  */
 class AuthRepository {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
-    fun register(email: String, password: String, onComplete: (success: Boolean, errorMessage: String?) -> Unit) {
+    /**
+     * Registra en Firebase Authentication y crea el documento en Firestore /users/{uid}.
+     * name y username son opcionales y se incluyen en el documento.
+     */
+    fun register(
+        email: String,
+        password: String,
+        name: String = "",
+        username: String = "",
+        onComplete: (success: Boolean, errorMessage: String?) -> Unit
+    ) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    onComplete(true, null)
+                    val uid = auth.currentUser?.uid
+                    if (uid == null) {
+                        onComplete(false, "No se obtuvo el uid del usuario")
+                        return@addOnCompleteListener
+                    }
+
+                    // Construir el mapa de datos para Firestore
+                    val userMap = hashMapOf<String, Any>(
+                        "uid" to uid,
+                        "created_at" to FieldValue.serverTimestamp(),
+                        "current_household_id" to "",
+                        "email" to email,
+                        "name" to name,
+                        "profileicon" to "",
+                        "total_points" to 0L,
+                        "username" to username
+                    )
+
+                    firestore.collection("users").document(uid)
+                        .set(userMap)
+                        .addOnSuccessListener {
+                            onComplete(true, null)
+                        }
+                        .addOnFailureListener { ex ->
+                            val msg = ex.localizedMessage ?: "Error al guardar usuario en Firestore"
+                            onComplete(false, msg)
+                        }
                 } else {
                     val ex = task.exception
                     val message = when (ex) {
