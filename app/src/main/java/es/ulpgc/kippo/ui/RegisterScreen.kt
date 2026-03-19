@@ -15,9 +15,12 @@ fun RegisterScreen(viewModel: RegisterViewModel = viewModel()) {
     val email = viewModel.email.value
     val password = viewModel.password.value
     val username = viewModel.username.value
+    val name = viewModel.name.value
     val isLoading = viewModel.isLoading.value
     val error = viewModel.error.value
     val isSuccess = viewModel.isSuccess.value
+    val fieldErrors = viewModel.fieldErrors.value
+    
 
     Column(
         modifier = Modifier
@@ -35,8 +38,38 @@ fun RegisterScreen(viewModel: RegisterViewModel = viewModel()) {
             onValueChange = { viewModel.onUsernameChange(it) },
             label = { Text("Nombre de usuario") },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = !isLoading,
+            isError = fieldErrors["username"] != null
         )
+        if (fieldErrors["username"] != null) {
+            Text(
+                text = fieldErrors["username"] ?: "",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { viewModel.onNameChange(it) },
+            label = { Text("Nombre") },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading,
+            isError = fieldErrors["name"] != null
+        )
+        if (fieldErrors["name"] != null) {
+            Text(
+                text = fieldErrors["name"] ?: "",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -45,8 +78,17 @@ fun RegisterScreen(viewModel: RegisterViewModel = viewModel()) {
             onValueChange = { viewModel.onEmailChange(it) },
             label = { Text("Correo electrónico") },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = !isLoading,
+            isError = fieldErrors["email"] != null
         )
+        if (fieldErrors["email"] != null) {
+            Text(
+                text = fieldErrors["email"] ?: "",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -56,8 +98,17 @@ fun RegisterScreen(viewModel: RegisterViewModel = viewModel()) {
             label = { Text("Contraseña") },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = PasswordVisualTransformation(),
-            enabled = !isLoading
+            enabled = !isLoading,
+            isError = fieldErrors["password"] != null
         )
+        if (fieldErrors["password"] != null) {
+            Text(
+                text = fieldErrors["password"] ?: "",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            )
+        }
 
         if (error != null) {
             Text(
@@ -75,6 +126,8 @@ fun RegisterScreen(viewModel: RegisterViewModel = viewModel()) {
             )
         }
 
+        
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
@@ -91,5 +144,7 @@ fun RegisterScreen(viewModel: RegisterViewModel = viewModel()) {
                 Text("Registrarse")
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }

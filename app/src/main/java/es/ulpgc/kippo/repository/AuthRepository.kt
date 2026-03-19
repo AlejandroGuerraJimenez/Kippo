@@ -3,6 +3,7 @@ package es.ulpgc.kippo.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 
+
 /**
  * Repositorio para operaciones de autenticación en Firebase.
  * Proporciona funciones para registrar y loguear usuarios y devuelve
@@ -24,6 +25,10 @@ class AuthRepository {
                     }
                     onComplete(false, message)
                 }
+            }
+            .addOnFailureListener { ex ->
+                val msg = ex.localizedMessage ?: "Error desconocido en register"
+                onComplete(false, msg)
             }
     }
 
