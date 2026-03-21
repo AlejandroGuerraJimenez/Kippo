@@ -70,12 +70,6 @@ class MainActivity : ComponentActivity() {
                                 screenState.value = "create_household"
                             }
                         )
-                        "home" -> HomeScreen(
-                            onSignOut = {
-                                auth.signOut()
-                                screenState.value = "login"
-                            }
-                        )
                         "create_household" -> CreateHouseholdScreen(
                             onHouseholdCreated = {
                                 screenState.value = "home_dispatch"
@@ -98,7 +92,10 @@ fun HomeDispatch(
     val hasHousehold by viewModel.hasHousehold.collectAsState()
 
     when (hasHousehold) {
-        true -> HomeScreen(onSignOut = onSignOut)
+        true -> HomeScreen(
+            onSignOut = onSignOut,
+            onLeaveHousehold = { viewModel.leaveHousehold() }
+        )
         false -> SetupHouseholdScreen(
             onCreateHouseholdClick = onCreateHouseholdRequested,
             onSignOut = onSignOut

@@ -10,7 +10,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,8 +24,34 @@ import es.ulpgc.kippo.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onSignOut: () -> Unit = {}
+    onSignOut: () -> Unit = {},
+    onLeaveHousehold: () -> Unit = {}
 ) {
+    var showLeaveDialog by remember { mutableStateOf(false) }
+
+    if (showLeaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showLeaveDialog = false },
+            title = { Text("Leave Household") },
+            text = { Text("Are you sure you want to leave this household? You will need an invitation to join again.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLeaveDialog = false
+                        onLeaveHousehold()
+                    }
+                ) {
+                    Text("Leave", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLeaveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = { KippoTopBar() },
         bottomBar = { KippoBottomBar() },
@@ -51,8 +77,23 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            OutlinedButton(
+                onClick = { showLeaveDialog = true },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                border = BorderStroke(1.dp, Color.Red),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.ExitToApp, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Leave Household")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Button(
                 onClick = onSignOut,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = KippoColors.DarkTeal),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -72,9 +113,8 @@ fun ActionButtonsRow() {
             .padding(vertical = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // TASKS Button (formerly Actions/Create Home)
         Button(
-            onClick = { /* Navigate to tasks or similar */ },
+            onClick = { },
             modifier = Modifier
                 .weight(1f)
                 .height(54.dp),
@@ -95,9 +135,8 @@ fun ActionButtonsRow() {
             )
         }
 
-        // REWARDS Button
         Button(
-            onClick = { /* Navigate to rewards */ },
+            onClick = { },
             modifier = Modifier
                 .weight(1f)
                 .height(54.dp),

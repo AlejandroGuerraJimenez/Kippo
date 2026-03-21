@@ -81,7 +81,7 @@ fun SetupHouseholdScreen(
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             TextButton(onClick = onSignOut) {
                 Text("Sign out", color = KippoColors.DarkTeal)
             }
