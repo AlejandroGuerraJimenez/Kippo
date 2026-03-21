@@ -1,20 +1,26 @@
 package es.ulpgc.kippo.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import es.ulpgc.kippo.R
 import es.ulpgc.kippo.viewmodel.RegisterViewModel
-
-// colors moved to Colors.kt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,13 +48,43 @@ fun RegisterScreen(
         unfocusedTextColor = KippoColors.DarkText
     )
 
-    Box(
+    Column(
         modifier = Modifier
-                .fillMaxSize()
-                .background(KippoColors.Background)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
+            .fillMaxSize()
+            .background(KippoColors.Background)
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
+        // Logo and App Name OUTSIDE the Card
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Surface(
+            shape = CircleShape,
+            color = Color.White,
+            modifier = Modifier.size(100.dp),
+            shadowElevation = 4.dp
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_logo_kippo),
+                contentDescription = "Logo",
+                modifier = Modifier
+                    .clip(CircleShape)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "Kippo",
+            fontSize = 36.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = KippoColors.Teal
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
@@ -59,12 +95,11 @@ fun RegisterScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "Registro",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = KippoColors.DarkText
                 )
@@ -158,15 +193,6 @@ fun RegisterScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                TextButton(
-                    onClick = onNavigateToLogin,
-                    colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.Teal)
-                ) {
-                    Text("¿Ya tienes cuenta? Inicia sesión", fontWeight = FontWeight.SemiBold)
-                }
-
                 if (error != null) {
                     Text(
                         text = error,
@@ -178,7 +204,7 @@ fun RegisterScreen(
                 if (isSuccess) {
                     Text(
                         text = "¡Registro completado con éxito!",
-                            color = KippoColors.Teal,
+                        color = KippoColors.Teal,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 8.dp)
                     )
@@ -209,7 +235,17 @@ fun RegisterScreen(
                         Text("Registrarse", fontWeight = FontWeight.Bold)
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextButton(
+                    onClick = onNavigateToLogin,
+                    colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.Teal)
+                ) {
+                    Text("¿Ya tienes cuenta? Inicia sesión", fontWeight = FontWeight.SemiBold)
+                }
             }
         }
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
