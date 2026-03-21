@@ -22,6 +22,7 @@ import es.ulpgc.kippo.ui.RegisterScreen
 import es.ulpgc.kippo.ui.LoginScreen
 import es.ulpgc.kippo.ui.HomeScreen
 import es.ulpgc.kippo.ui.CreateHouseholdScreen
+import es.ulpgc.kippo.ui.JoinHouseholdScreen
 import es.ulpgc.kippo.ui.SetupHouseholdScreen
 import es.ulpgc.kippo.viewmodel.HomeViewModel
 import es.ulpgc.kippo.ui.KippoColors
@@ -62,16 +63,28 @@ class MainActivity : ComponentActivity() {
                             onNavigateToRegister = { screenState.value = "register" }
                         )
                         "home_dispatch" -> HomeDispatch(
+                            sessionUserId = auth.currentUser?.uid,
                             onSignOut = {
                                 auth.signOut()
                                 screenState.value = "login"
                             },
                             onCreateHouseholdRequested = {
                                 screenState.value = "create_household"
+                            },
+                            onJoinHouseholdRequested = {
+                                screenState.value = "join_household"
                             }
                         )
                         "create_household" -> CreateHouseholdScreen(
                             onHouseholdCreated = {
+                                screenState.value = "home_dispatch"
+                            }
+                        )
+                        "join_household" -> JoinHouseholdScreen(
+                            onJoinedHousehold = {
+                                screenState.value = "home_dispatch"
+                            },
+                            onBack = {
                                 screenState.value = "home_dispatch"
                             }
                         )
@@ -85,19 +98,31 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun HomeDispatch(
+    sessionUserId: String?,
     onSignOut: () -> Unit,
     onCreateHouseholdRequested: () -> Unit,
-    viewModel: HomeViewModel = viewModel()
+    onJoinHouseholdRequested: () -> Unit
 ) {
+    val viewModel: HomeViewModel = viewModel(key = "home_vm_${sessionUserId ?: "signed_out"}")
+
     val hasHousehold by viewModel.hasHousehold.collectAsState()
+    val household by viewModel.household.collectAsState()
+    val leaveInProgress by viewModel.leaveInProgress.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     when (hasHousehold) {
         true -> HomeScreen(
             onSignOut = onSignOut,
-            onLeaveHousehold = { viewModel.leaveHousehold() }
+            onLeaveHousehold = { viewModel.leaveHousehold() },
+            householdName = household?.name.orEmpty(),
+            householdCode = household?.joinCode.orEmpty(),
+            leaveInProgress = leaveInProgress,
+            errorMessage = errorMessage,
+            onDismissError = { viewModel.clearError() }
         )
         false -> SetupHouseholdScreen(
             onCreateHouseholdClick = onCreateHouseholdRequested,
+            onJoinHouseholdClick = onJoinHouseholdRequested,
             onSignOut = onSignOut
         )
         null -> {

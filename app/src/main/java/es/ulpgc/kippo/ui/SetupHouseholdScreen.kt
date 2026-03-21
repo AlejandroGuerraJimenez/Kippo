@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddHome
+import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -12,12 +13,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupHouseholdScreen(
     onCreateHouseholdClick: () -> Unit,
+    onJoinHouseholdClick: () -> Unit,
     onSignOut: () -> Unit
 ) {
     Scaffold(
@@ -45,9 +46,9 @@ fun SetupHouseholdScreen(
                 modifier = Modifier.size(100.dp),
                 tint = KippoColors.Teal
             )
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Text(
                 text = "You don't have a household yet",
                 style = MaterialTheme.typography.headlineSmall,
@@ -55,18 +56,18 @@ fun SetupHouseholdScreen(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
                 text = "To start using Kippo, you need to create a new household or join an existing one.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = KippoColors.DarkText.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
-            
+
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             Button(
                 onClick = onCreateHouseholdClick,
                 modifier = Modifier
@@ -79,7 +80,21 @@ fun SetupHouseholdScreen(
                 Spacer(Modifier.width(8.dp))
                 Text("CREATE HOUSEHOLD", fontWeight = FontWeight.Bold)
             }
-            
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = onJoinHouseholdClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.GroupAdd, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("JOIN WITH CODE", fontWeight = FontWeight.Bold)
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             TextButton(onClick = onSignOut) {

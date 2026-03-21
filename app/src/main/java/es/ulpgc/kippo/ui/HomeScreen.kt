@@ -25,7 +25,12 @@ import es.ulpgc.kippo.R
 @Composable
 fun HomeScreen(
     onSignOut: () -> Unit = {},
-    onLeaveHousehold: () -> Unit = {}
+    onLeaveHousehold: () -> Unit = {},
+    householdName: String = "",
+    householdCode: String = "",
+    leaveInProgress: Boolean = false,
+    errorMessage: String? = null,
+    onDismissError: () -> Unit = {}
 ) {
     var showLeaveDialog by remember { mutableStateOf(false) }
 
@@ -75,6 +80,32 @@ fun HomeScreen(
                 fontWeight = FontWeight.Medium
             )
 
+            if (householdName.isNotBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = householdName,
+                    color = KippoColors.DarkText,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (householdCode.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Join code: $householdCode",
+                    color = KippoColors.DarkText.copy(alpha = 0.75f),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            if (!errorMessage.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = onDismissError) {
+                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
+                }
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
             OutlinedButton(
@@ -82,7 +113,8 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
                 border = BorderStroke(1.dp, Color.Red),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                enabled = !leaveInProgress
             ) {
                 Icon(Icons.Default.ExitToApp, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
@@ -239,16 +271,16 @@ fun KippoBottomBar() {
             ) {
                 IconButton(onClick = { }) {
                     Icon(
-                        Icons.Default.Home, 
-                        contentDescription = "Home", 
+                        Icons.Default.Home,
+                        contentDescription = "Home",
                         tint = KippoColors.Teal,
                         modifier = Modifier.size(28.dp)
                     )
                 }
                 IconButton(onClick = { }) {
                     Icon(
-                        Icons.Default.BusinessCenter, 
-                        contentDescription = "Tasks", 
+                        Icons.Default.BusinessCenter,
+                        contentDescription = "Tasks",
                         tint = Color.LightGray,
                         modifier = Modifier.size(28.dp)
                     )
@@ -258,16 +290,16 @@ fun KippoBottomBar() {
 
                 IconButton(onClick = { }) {
                     Icon(
-                        Icons.Default.CalendarMonth, 
-                        contentDescription = "Calendar", 
+                        Icons.Default.CalendarMonth,
+                        contentDescription = "Calendar",
                         tint = Color.LightGray,
                         modifier = Modifier.size(28.dp)
                     )
                 }
                 IconButton(onClick = { }) {
                     Icon(
-                        Icons.Outlined.Person, 
-                        contentDescription = "Profile", 
+                        Icons.Outlined.Person,
+                        contentDescription = "Profile",
                         tint = Color.LightGray,
                         modifier = Modifier.size(28.dp)
                     )
