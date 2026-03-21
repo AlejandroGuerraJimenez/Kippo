@@ -1,6 +1,5 @@
 package es.ulpgc.kippo.repository
 
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.firestore.FieldValue
@@ -42,7 +41,7 @@ class AuthRepository {
                         "current_household_id" to "",
                         "email" to email,
                         "name" to name,
-                        "profileicon" to "",
+                        "profileicon" to "placeholder_avatar",
                         "total_points" to 0L,
                         "username" to username
                     )

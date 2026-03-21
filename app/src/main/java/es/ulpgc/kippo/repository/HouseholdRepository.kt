@@ -2,6 +2,7 @@ package es.ulpgc.kippo.repository
 
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import es.ulpgc.kippo.model.Household
 import kotlin.random.Random
 import kotlinx.coroutines.tasks.await
@@ -88,7 +89,9 @@ class HouseholdRepository(
             }
 
             val userRef = usersCollection.document(userId)
-            val codeRef = householdCodesCollection.document(joinCode)
+            val householdId = resolveHouseholdIdByCode(joinCode)
+                ?: return Result.failure(IllegalArgumentException("Código no válido"))
+
             var joinedHouseholdRef = householdCollection.document("invalid")
 
             firestore.runTransaction { transaction ->
@@ -98,14 +101,6 @@ class HouseholdRepository(
                     throw IllegalStateException("Ya perteneces a un household")
                 }
 
-                val codeSnapshot = transaction.get(codeRef)
-                if (!codeSnapshot.exists()) {
-                    throw IllegalArgumentException("Código no válido")
-                }
-
-                val householdId = codeSnapshot.getString("householdId")
-                    ?: throw IllegalStateException("Código inválido o incompleto")
-
                 val householdRef = householdCollection.document(householdId)
                 joinedHouseholdRef = householdRef
                 val householdSnapshot = transaction.get(householdRef)
@@ -114,8 +109,24 @@ class HouseholdRepository(
                 }
 
                 transaction.update(householdRef, "members", FieldValue.arrayUnion(userId))
+                transaction.update(householdRef, "residents", FieldValue.arrayUnion(userId))
                 transaction.update(userRef, "current_household_id", householdId)
             }.await()
+
+            // Normaliza el índice de códigos para households legacy o incompletos.
+            householdCodesCollection.document(joinCode)
+                .set(
+                    mapOf(
+                        "householdId" to householdId,
+                        "createdAt" to FieldValue.serverTimestamp()
+                    ),
+                    SetOptions.merge()
+                )
+                .await()
+
+            householdCollection.document(householdId)
+                .set(mapOf("joinCode" to joinCode), SetOptions.merge())
+                .await()
 
             val joinedHousehold = joinedHouseholdRef.get().await().toObject(Household::class.java)
             if (joinedHousehold == null) {
@@ -177,5 +188,30 @@ class HouseholdRepository(
 
     private fun generateJoinCode(): String {
         return Random.nextInt(0, 1_000_000).toString().padStart(6, '0')
+    }
+
+    private suspend fun resolveHouseholdIdByCode(joinCode: String): String? {
+        val codeDoc = householdCodesCollection.document(joinCode).get().await()
+        codeDoc.getString("householdId")?.let { return it }
+
+        val joinCodeMatch = householdCollection
+            .whereEqualTo("joinCode", joinCode)
+            .limit(1)
+            .get()
+            .await()
+            .documents
+            .firstOrNull()
+        if (joinCodeMatch != null) return joinCodeMatch.id
+
+        val legacyNumericCode = joinCode.toLongOrNull() ?: return null
+        val legacyMatch = householdCollection
+            .whereEqualTo("code", legacyNumericCode)
+            .limit(1)
+            .get()
+            .await()
+            .documents
+            .firstOrNull()
+
+        return legacyMatch?.id
     }
 }

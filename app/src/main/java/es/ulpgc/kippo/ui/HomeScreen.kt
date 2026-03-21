@@ -3,7 +3,6 @@ package es.ulpgc.kippo.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -12,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +25,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import es.ulpgc.kippo.R
 import es.ulpgc.kippo.model.User
 import es.ulpgc.kippo.viewmodel.HomeViewModel
+import es.ulpgc.kippo.ui.components.BottomNavDestination
+import es.ulpgc.kippo.ui.components.KippoBottomBar
+
+enum class HomeSection {
+    HOME,
+    PROFILE
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +40,18 @@ fun HomeScreen(
     onLeaveHousehold: () -> Unit = {},
     onNavigateToTasks: () -> Unit = {},
     onCreateTaskClick: () -> Unit = {},
+    householdName: String = "",
+    householdCode: String = "",
+    profileName: String = "",
+    profileUsername: String = "",
+    profileEmail: String = "",
+    profilePoints: Long = 0,
+    profileIconKey: String = "placeholder_avatar",
+    leaveInProgress: Boolean = false,
+    profileUpdateInProgress: Boolean = false,
+    errorMessage: String? = null,
+    onDismissError: () -> Unit = {},
+    onEditProfile: (String, String) -> Unit = { _, _ -> },
     viewModel: HomeViewModel = viewModel()
 ) {
     val household by viewModel.household.collectAsState()
@@ -43,6 +60,8 @@ fun HomeScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var currentSection by remember { mutableStateOf(HomeSection.HOME) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
 
     if (showLeaveDialog) {
         AlertDialog(
@@ -54,14 +73,33 @@ fun HomeScreen(
                     onClick = {
                         showLeaveDialog = false
                         onLeaveHousehold()
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
                 ) {
-                    Text("Leave", color = Color.Red)
+                    Text("Leave")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLeaveDialog = false }) {
+                TextButton(
+                    onClick = { showLeaveDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.DarkTeal)
+                ) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showEditProfileDialog) {
+        EditProfileDialog(
+            initialName = profileName,
+            initialUsername = profileUsername,
+            isSaving = profileUpdateInProgress,
+            onDismiss = { showEditProfileDialog = false },
+            onSave = { newName, newUsername ->
+                onEditProfile(newName, newUsername)
+                if (!profileUpdateInProgress) {
+                    showEditProfileDialog = false
                 }
             }
         )
@@ -69,7 +107,19 @@ fun HomeScreen(
 
     Scaffold(
         topBar = { KippoTopBar(householdName = household?.name ?: "Home") },
-        bottomBar = { KippoBottomBar(onCreateClick = onCreateTaskClick, onTasksClick = onNavigateToTasks) },
+        bottomBar = {
+            KippoBottomBar(
+                selectedDestination = if (currentSection == HomeSection.PROFILE) {
+                    BottomNavDestination.PROFILE
+                } else {
+                    BottomNavDestination.HOME
+                },
+                onHomeClick = { currentSection = HomeSection.HOME },
+                onTasksClick = onNavigateToTasks,
+                onCreateClick = onCreateTaskClick,
+                onProfileClick = { currentSection = HomeSection.PROFILE }
+            )
+        },
         containerColor = KippoColors.Background
     ) { padding ->
         Column(
@@ -79,19 +129,29 @@ fun HomeScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Members Section
-            MembersSection(members)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            ActionButtonsRow(onTasksClick = onNavigateToTasks)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            household?.let { h ->
-                InviteCodeCard(h.joinCode)
+            if (currentSection == HomeSection.HOME) {
+                MembersSection(members)
+                Spacer(modifier = Modifier.height(16.dp))
+                ActionButtonsRow(onTasksClick = onNavigateToTasks)
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (currentSection == HomeSection.HOME) {
+                household?.let { h ->
+                    InviteCodeCard(h.joinCode)
+                }
+            } else {
+                ProfileSection(
+                    name = profileName,
+                    username = profileUsername,
+                    email = profileEmail,
+                    points = profilePoints,
+                    profileIconKey = profileIconKey,
+                    onEditProfile = { showEditProfileDialog = true },
+                    onSignOut = onSignOut
+                )
+            }
             if (!errorMessage.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -103,28 +163,19 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            OutlinedButton(
-                onClick = { showLeaveDialog = true },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                border = BorderStroke(1.dp, Color.Red),
-                shape = RoundedCornerShape(12.dp),
-                enabled = !leaveInProgress
-            ) {
-                Icon(Icons.Default.ExitToApp, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Leave Household")
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = onSignOut,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = KippoColors.DarkTeal),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Sign out")
+            if (currentSection == HomeSection.HOME) {
+                OutlinedButton(
+                    onClick = { showLeaveDialog = true },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                    border = BorderStroke(1.dp, Color.Red),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !leaveInProgress
+                ) {
+                    Icon(Icons.Default.ExitToApp, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Leave Household")
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -269,6 +320,8 @@ fun ActionButtonsRow(onTasksClick: () -> Unit) {
     }
 }
 
+// Profile UI extracted to ProfileScreen.kt
+
 @Composable
 fun KippoTopBar(householdName: String = "Home") {
     Row(
@@ -325,90 +378,4 @@ fun KippoTopBar(householdName: String = "Home") {
     }
 }
 
-@Composable
-fun KippoBottomBar(onCreateClick: () -> Unit = {}, onTasksClick: () -> Unit = {}) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(90.dp),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(70.dp),
-            color = Color.White,
-            shadowElevation = 8.dp
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { }) {
-                    Icon(
-                        Icons.Default.Home, 
-                        contentDescription = "Home", 
-                        tint = KippoColors.Teal,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                IconButton(onClick = onTasksClick) {
-                    Icon(
-                        Icons.Default.TaskAlt, 
-                        contentDescription = "Tasks", 
-                        tint = Color.LightGray,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(60.dp))
-
-                IconButton(onClick = { }) {
-                    Icon(
-                        Icons.Default.CalendarMonth, 
-                        contentDescription = "Calendar", 
-                        tint = Color.LightGray,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                IconButton(onClick = { }) {
-                    Icon(
-                        Icons.Outlined.Person, 
-                        contentDescription = "Profile", 
-                        tint = Color.LightGray,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-        }
-
-        Surface(
-            shape = CircleShape,
-            color = KippoColors.Yellow,
-            modifier = Modifier
-                .size(74.dp)
-                .align(Alignment.TopCenter)
-                .offset(y = (-12).dp)
-                .clickable { onCreateClick() },
-            shadowElevation = 6.dp,
-            border = BorderStroke(4.dp, Color.White)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Surface(
-                    shape = CircleShape,
-                    color = Color.White,
-                    modifier = Modifier.size(54.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_logo_kippo_transparent),
-                        contentDescription = "Main Logo",
-                        modifier = Modifier
-                            .padding(0.dp)
-                            .clip(CircleShape)
-                    )
-                }
-            }
-        }
-    }
-}
+// Bottom bar extracted to ui/components/KippoBottomBar.kt for reuse.

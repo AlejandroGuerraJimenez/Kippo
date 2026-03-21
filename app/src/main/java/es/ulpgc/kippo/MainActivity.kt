@@ -91,6 +91,9 @@ class MainActivity : ComponentActivity() {
                                 householdId = household?.id ?: "",
                                 members = members,
                                 onBack = { screenState.value = "home_dispatch" },
+                                onNavigateHome = { screenState.value = "home_dispatch" },
+                                onNavigateProfile = { screenState.value = "home_dispatch" },
+                                onCreateTaskClick = { showCreateTaskDialog = true },
                                 viewModel = taskVm
                             )
                         }
@@ -111,11 +114,28 @@ fun HomeDispatch(
     onCreateTaskRequested: () -> Unit
 ) {
     val hasHousehold by viewModel.hasHousehold.collectAsState()
+    val household by viewModel.household.collectAsState()
+    val currentUserProfile by viewModel.currentUserProfile.collectAsState()
+    val leaveInProgress by viewModel.leaveInProgress.collectAsState()
+    val profileUpdateInProgress by viewModel.profileUpdateInProgress.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     when (hasHousehold) {
         true -> HomeScreen(
             onSignOut = onSignOut,
             onLeaveHousehold = { viewModel.leaveHousehold() },
+            householdName = household?.name.orEmpty(),
+            householdCode = household?.joinCode.orEmpty(),
+            profileName = currentUserProfile?.name.orEmpty(),
+            profileUsername = currentUserProfile?.username.orEmpty(),
+            profileEmail = currentUserProfile?.email.orEmpty(),
+            profilePoints = currentUserProfile?.total_points ?: 0L,
+            profileIconKey = currentUserProfile?.profileicon.orEmpty(),
+            leaveInProgress = leaveInProgress,
+            profileUpdateInProgress = profileUpdateInProgress,
+            errorMessage = errorMessage,
+            onDismissError = { viewModel.clearError() },
+            onEditProfile = { name, username -> viewModel.updateProfile(name, username) },
             onNavigateToTasks = onNavigateToTasks,
             onCreateTaskClick = onCreateTaskRequested,
             viewModel = viewModel

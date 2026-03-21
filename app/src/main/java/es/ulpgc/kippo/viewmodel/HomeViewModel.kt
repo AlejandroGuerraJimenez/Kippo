@@ -25,6 +25,9 @@ class HomeViewModel(
     private val _household = MutableStateFlow<Household?>(null)
     val household = _household.asStateFlow()
 
+    private val _currentUserProfile = MutableStateFlow<User?>(null)
+    val currentUserProfile = _currentUserProfile.asStateFlow()
+
     private val _members = MutableStateFlow<List<User>>(emptyList())
     val members = _members.asStateFlow()
 
@@ -33,6 +36,9 @@ class HomeViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
+
+    private val _profileUpdateInProgress = MutableStateFlow(false)
+    val profileUpdateInProgress = _profileUpdateInProgress.asStateFlow()
 
     private var currentHouseholdId: String? = null
 
@@ -49,6 +55,7 @@ class HomeViewModel(
 
         userRepository.observeUser(currentUser.uid)
             .onEach { user ->
+                _currentUserProfile.value = user
                 currentHouseholdId = user?.current_household_id
                 _hasHousehold.value = !currentHouseholdId.isNullOrBlank()
                 _errorMessage.value = null
@@ -98,6 +105,40 @@ class HomeViewModel(
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    fun updateProfile(name: String, username: String) {
+        val uid = auth.currentUser?.uid ?: return
+        val cleanName = name.trim()
+        val cleanUsername = username.trim()
+
+        if (cleanName.isBlank()) {
+            _errorMessage.value = "El nombre no puede estar vacío"
+            return
+        }
+
+        if (cleanUsername.isBlank()) {
+            _errorMessage.value = "El nombre de usuario no puede estar vacío"
+            return
+        }
+
+        viewModelScope.launch {
+            _profileUpdateInProgress.value = true
+            val avatar = _currentUserProfile.value?.profileicon?.ifBlank { "placeholder_avatar" }
+                ?: "placeholder_avatar"
+
+            val result = userRepository.updateUserProfile(
+                uid = uid,
+                name = cleanName,
+                username = cleanUsername,
+                profileIcon = avatar
+            )
+
+            result.onFailure { ex ->
+                _errorMessage.value = ex.message ?: "No se pudo actualizar el perfil"
+            }
+            _profileUpdateInProgress.value = false
+        }
     }
 
     fun signOut() {

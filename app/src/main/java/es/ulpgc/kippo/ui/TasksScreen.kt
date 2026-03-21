@@ -1,6 +1,7 @@
 package es.ulpgc.kippo.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import es.ulpgc.kippo.model.Task
 import es.ulpgc.kippo.model.User
+import es.ulpgc.kippo.ui.components.BottomNavDestination
+import es.ulpgc.kippo.ui.components.KippoBottomBar
 import es.ulpgc.kippo.viewmodel.TaskViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -35,6 +38,9 @@ fun TasksScreen(
     householdId: String,
     members: List<User>,
     onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onNavigateProfile: () -> Unit,
+    onCreateTaskClick: () -> Unit,
     viewModel: TaskViewModel = viewModel()
 ) {
     val tasks by viewModel.tasks.collectAsState()
@@ -84,6 +90,15 @@ fun TasksScreen(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = KippoColors.Background
                 )
+            )
+        },
+        bottomBar = {
+            KippoBottomBar(
+                selectedDestination = BottomNavDestination.TASKS,
+                onHomeClick = onNavigateHome,
+                onTasksClick = {},
+                onCreateClick = onCreateTaskClick,
+                onProfileClick = onNavigateProfile
             )
         },
         containerColor = KippoColors.Background
@@ -256,6 +271,15 @@ fun CreateTaskDialog(
     var points by remember { mutableStateOf("10") }
     var assignedTo by remember { mutableStateOf<String?>(null) }
     var expanded by remember { mutableStateOf(false) }
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = KippoColors.Teal,
+        unfocusedBorderColor = KippoColors.DarkTeal.copy(alpha = 0.3f),
+        focusedLabelColor = KippoColors.Teal,
+        unfocusedLabelColor = KippoColors.DarkText.copy(alpha = 0.6f),
+        cursorColor = KippoColors.Teal,
+        focusedTextColor = KippoColors.DarkText,
+        unfocusedTextColor = KippoColors.DarkText
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -263,7 +287,13 @@ fun CreateTaskDialog(
         modifier = Modifier
             .fillMaxWidth(0.92f)
             .padding(vertical = 24.dp),
-        title = { Text("Add New Task", fontWeight = FontWeight.Bold) },
+        title = {
+            Text(
+                "Add New Task",
+                fontWeight = FontWeight.Bold,
+                color = KippoColors.DarkText
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -275,7 +305,8 @@ fun CreateTaskDialog(
                     label = { Text("Task Title") },
                     placeholder = { Text("Ej: Sacar la basura") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = fieldColors
                 )
                 OutlinedTextField(
                     value = description,
@@ -283,31 +314,35 @@ fun CreateTaskDialog(
                     label = { Text("Description") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = fieldColors
                 )
                 OutlinedTextField(
                     value = points,
                     onValueChange = { if (it.all { char -> char.isDigit() }) points = it },
                     label = { Text("Points reward") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = fieldColors
                 )
                 
                 Column {
                     Text(
                         text = "Assign to",
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.Gray,
+                        color = KippoColors.DarkText.copy(alpha = 0.7f),
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
                     )
                     Box {
                         OutlinedButton(
                             onClick = { expanded = true },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = KippoColors.DarkText),
+                            border = BorderStroke(1.dp, KippoColors.Yellow)
                         ) {
                             val selectedName = members.find { it.uid == assignedTo }?.username ?: "Anyone"
-                            Text(selectedName, color = if (assignedTo == null) Color.Gray else KippoColors.Teal)
+                            Text(selectedName, color = if (assignedTo == null) KippoColors.DarkText.copy(alpha = 0.6f) else KippoColors.Teal)
                             Spacer(Modifier.weight(1f))
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                         }
@@ -349,11 +384,14 @@ fun CreateTaskDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.DarkTeal)
             ) {
-                Text("CANCEL", color = Color.Gray)
+                Text("CANCEL")
             }
-        }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(24.dp)
     )
 }
 

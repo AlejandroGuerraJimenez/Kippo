@@ -40,65 +40,81 @@ fun SetupHouseholdScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Home,
-                contentDescription = null,
-                modifier = Modifier.size(100.dp),
-                tint = KippoColors.Teal
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "You don't have a household yet",
-                style = MaterialTheme.typography.headlineSmall,
-                color = KippoColors.DarkText,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "To start using Kippo, you need to create a new household or join an existing one.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = KippoColors.DarkText.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            Button(
-                onClick = onCreateHouseholdClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
-                shape = RoundedCornerShape(16.dp)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White)
             ) {
-                Icon(Icons.Default.AddHome, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("CREATE HOUSEHOLD", fontWeight = FontWeight.Bold)
-            }
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = null,
+                        modifier = Modifier.size(100.dp),
+                        tint = KippoColors.Teal
+                    )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-            OutlinedButton(
-                onClick = onJoinHouseholdClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.GroupAdd, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("JOIN WITH CODE", fontWeight = FontWeight.Bold)
-            }
+                    Text(
+                        text = "You don't have a household yet",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = KippoColors.DarkText,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            TextButton(onClick = onSignOut) {
-                Text("Sign out", color = KippoColors.DarkTeal)
+                    Text(
+                        text = "To start using Kippo, create a household or join with an invite code.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = KippoColors.DarkText.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = onCreateHouseholdClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.AddHome, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("CREATE HOUSEHOLD", fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedButton(
+                        onClick = onJoinHouseholdClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, KippoColors.Yellow),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = KippoColors.DarkText)
+                    ) {
+                        Icon(Icons.Default.GroupAdd, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("JOIN WITH CODE", fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    TextButton(
+                        onClick = onSignOut,
+                        colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.DarkTeal)
+                    ) {
+                        Text("Sign out")
+                    }
+                }
             }
         }
     }

@@ -47,4 +47,27 @@ class UserRepository(
         }
         awaitClose { subscription.remove() }
     }
+
+    suspend fun updateUserProfile(
+        uid: String,
+        name: String,
+        username: String,
+        profileIcon: String
+    ): Result<Unit> {
+        return try {
+            usersCollection.document(uid)
+                .update(
+                    mapOf(
+                        "name" to name,
+                        "username" to username,
+                        "profileicon" to profileIcon
+                    )
+                )
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
