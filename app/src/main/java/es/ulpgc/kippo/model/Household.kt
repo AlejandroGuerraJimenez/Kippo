@@ -10,5 +10,6 @@ data class Household(
     val creatorId: String = "",
     val joinCode: String = "",
     val members: List<String> = emptyList(),
+    val imageUrl: String? = null,
     @ServerTimestamp val createdAt: Date? = null
 )

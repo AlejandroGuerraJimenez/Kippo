@@ -61,19 +61,26 @@ class HomeViewModel(
                 _errorMessage.value = null
 
                 if (!currentHouseholdId.isNullOrBlank()) {
-                    val householdResult = householdRepository.getUserHousehold(currentUser.uid)
-                    val householdData = householdResult.getOrNull()
-                    _household.value = householdData
-                    
-                    householdData?.let { 
-                        fetchMembers(it.members)
-                    }
+                    refreshHouseholdData()
                 } else {
                     _household.value = null
                     _members.value = emptyList()
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun refreshHouseholdData() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val householdResult = householdRepository.getUserHousehold(uid)
+            val householdData = householdResult.getOrNull()
+            _household.value = householdData
+            
+            householdData?.let { 
+                fetchMembers(it.members)
+            }
+        }
     }
 
     private fun fetchMembers(uids: List<String>) {
@@ -83,6 +90,32 @@ class HomeViewModel(
                 _members.value = userList
             }.onFailure {
                 _members.value = emptyList()
+            }
+        }
+    }
+
+    fun updateHouseholdName(newName: String) {
+        val hid = currentHouseholdId ?: return
+        if (newName.isBlank()) return
+        
+        viewModelScope.launch {
+            val result = householdRepository.updateHouseholdName(hid, newName)
+            result.onSuccess {
+                refreshHouseholdData()
+            }.onFailure { ex ->
+                _errorMessage.value = ex.message ?: "No se pudo actualizar el nombre"
+            }
+        }
+    }
+
+    fun removeMember(userIdToRemove: String) {
+        val hid = currentHouseholdId ?: return
+        viewModelScope.launch {
+            val result = householdRepository.removeMember(hid, userIdToRemove)
+            result.onSuccess {
+                refreshHouseholdData()
+            }.onFailure { ex ->
+                _errorMessage.value = ex.message ?: "No se pudo eliminar al miembro"
             }
         }
     }

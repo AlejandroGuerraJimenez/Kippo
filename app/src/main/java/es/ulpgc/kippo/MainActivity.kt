@@ -48,6 +48,9 @@ class MainActivity : ComponentActivity() {
                     val taskVm: TaskViewModel = viewModel()
                     val household by homeVm.household.collectAsState()
                     val members by homeVm.members.collectAsState()
+                    val currentUserProfile by homeVm.currentUserProfile.collectAsState()
+                    val profileUpdateInProgress by homeVm.profileUpdateInProgress.collectAsState()
+                    val errorMessage by homeVm.errorMessage.collectAsState()
 
                     if (showCreateTaskDialog && household != null) {
                         CreateTaskDialog(
@@ -77,7 +80,8 @@ class MainActivity : ComponentActivity() {
                             onCreateHouseholdRequested = { screenState.value = "create_household" },
                             onJoinHouseholdRequested = { screenState.value = "join_household" },
                             onNavigateToTasks = { screenState.value = "tasks" },
-                            onCreateTaskRequested = { showCreateTaskDialog = true }
+                            onCreateTaskRequested = { showCreateTaskDialog = true },
+                            onNavigateToHouseholdProfile = { screenState.value = "household_profile" }
                         )
                         "create_household" -> CreateHouseholdScreen(
                             onHouseholdCreated = { screenState.value = "home_dispatch" }
@@ -92,10 +96,25 @@ class MainActivity : ComponentActivity() {
                                 members = members,
                                 onBack = { screenState.value = "home_dispatch" },
                                 onNavigateHome = { screenState.value = "home_dispatch" },
-                                onNavigateProfile = { screenState.value = "home_dispatch" },
+                                onNavigateProfile = { 
+                                    screenState.value = "home_dispatch" 
+                                },
                                 onCreateTaskClick = { showCreateTaskDialog = true },
                                 viewModel = taskVm
                             )
+                        }
+                        "household_profile" -> {
+                            if (household != null) {
+                                HouseholdProfileScreen(
+                                    household = household!!,
+                                    members = members,
+                                    onBack = { screenState.value = "home_dispatch" },
+                                    onUpdateName = { homeVm.updateHouseholdName(it) },
+                                    onRemoveMember = { homeVm.removeMember(it) }
+                                )
+                            } else {
+                                screenState.value = "home_dispatch"
+                            }
                         }
                     }
                 }
@@ -111,7 +130,8 @@ fun HomeDispatch(
     onCreateHouseholdRequested: () -> Unit,
     onJoinHouseholdRequested: () -> Unit,
     onNavigateToTasks: () -> Unit,
-    onCreateTaskRequested: () -> Unit
+    onCreateTaskRequested: () -> Unit,
+    onNavigateToHouseholdProfile: () -> Unit
 ) {
     val hasHousehold by viewModel.hasHousehold.collectAsState()
     val household by viewModel.household.collectAsState()
@@ -124,20 +144,16 @@ fun HomeDispatch(
         true -> HomeScreen(
             onSignOut = onSignOut,
             onLeaveHousehold = { viewModel.leaveHousehold() },
-            householdName = household?.name.orEmpty(),
-            householdCode = household?.joinCode.orEmpty(),
             profileName = currentUserProfile?.name.orEmpty(),
             profileUsername = currentUserProfile?.username.orEmpty(),
             profileEmail = currentUserProfile?.email.orEmpty(),
             profilePoints = currentUserProfile?.total_points ?: 0L,
             profileIconKey = currentUserProfile?.profileicon.orEmpty(),
-            leaveInProgress = leaveInProgress,
             profileUpdateInProgress = profileUpdateInProgress,
-            errorMessage = errorMessage,
-            onDismissError = { viewModel.clearError() },
             onEditProfile = { name, username -> viewModel.updateProfile(name, username) },
             onNavigateToTasks = onNavigateToTasks,
             onCreateTaskClick = onCreateTaskRequested,
+            onNavigateToHouseholdProfile = onNavigateToHouseholdProfile,
             viewModel = viewModel
         )
         false -> SetupHouseholdScreen(

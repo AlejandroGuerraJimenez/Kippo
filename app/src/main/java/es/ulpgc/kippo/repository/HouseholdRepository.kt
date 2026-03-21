@@ -109,7 +109,6 @@ class HouseholdRepository(
                 }
 
                 transaction.update(householdRef, "members", FieldValue.arrayUnion(userId))
-                transaction.update(householdRef, "residents", FieldValue.arrayUnion(userId))
                 transaction.update(userRef, "current_household_id", householdId)
             }.await()
 
@@ -164,6 +163,20 @@ class HouseholdRepository(
                 transaction.update(userRef, "current_household_id", null)
             }.await()
 
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun removeMember(householdId: String, userIdToRemove: String): Result<Unit> {
+        // La lógica de removeMember es idéntica a leaveHousehold en términos de base de datos
+        return leaveHousehold(userIdToRemove, householdId)
+    }
+
+    suspend fun updateHouseholdName(householdId: String, newName: String): Result<Unit> {
+        return try {
+            householdCollection.document(householdId).update("name", newName).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
