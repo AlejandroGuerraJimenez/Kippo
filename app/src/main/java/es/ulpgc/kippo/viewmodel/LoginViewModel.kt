@@ -24,6 +24,16 @@ class LoginViewModel(private val repository: AuthRepository = AuthRepository()) 
     fun onEmailChange(value: String) { _email.value = value }
     fun onPasswordChange(value: String) { _password.value = value }
 
+    fun onLoginScreenShown() {
+        _isSuccess.value = false
+        _error.value = null
+        _password.value = ""
+    }
+
+    fun consumeLoginSuccess() {
+        _isSuccess.value = false
+    }
+
     private fun validateInputs(): Boolean {
         val errors = mutableMapOf<String, String>()
         val emailValue = _email.value.trim()
@@ -44,6 +54,7 @@ class LoginViewModel(private val repository: AuthRepository = AuthRepository()) 
 
         _isLoading.value = true
         _error.value = null
+        _isSuccess.value = false
 
         repository.login(_email.value.trim(), _password.value) { success, errorMessage ->
             _isLoading.value = false

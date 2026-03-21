@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,11 +30,22 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit = {},
     onNavigateToRegister: () -> Unit = {}
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.onLoginScreenShown()
+    }
+
     val email = viewModel.email.value
     val password = viewModel.password.value
     val isLoading = viewModel.isLoading.value
     val error = viewModel.error.value
     val isSuccess = viewModel.isSuccess.value
+
+    LaunchedEffect(isSuccess) {
+        if (isSuccess) {
+            onLoginSuccess()
+            viewModel.consumeLoginSuccess()
+        }
+    }
 
     val kippoTextFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = KippoColors.Teal,
@@ -136,9 +148,6 @@ fun LoginScreen(
                     )
                 }
 
-                if (isSuccess) {
-                    onLoginSuccess()
-                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
