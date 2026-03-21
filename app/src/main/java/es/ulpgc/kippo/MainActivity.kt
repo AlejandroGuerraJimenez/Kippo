@@ -6,26 +6,16 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import es.ulpgc.kippo.ui.RegisterScreen
-import es.ulpgc.kippo.ui.LoginScreen
-import es.ulpgc.kippo.ui.HomeScreen
-import es.ulpgc.kippo.ui.CreateHouseholdScreen
-import es.ulpgc.kippo.ui.JoinHouseholdScreen
-import es.ulpgc.kippo.ui.SetupHouseholdScreen
+import es.ulpgc.kippo.ui.*
 import es.ulpgc.kippo.viewmodel.HomeViewModel
-import es.ulpgc.kippo.ui.KippoColors
+import es.ulpgc.kippo.viewmodel.TaskViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,6 +29,7 @@ class MainActivity : ComponentActivity() {
                     val auth = FirebaseAuth.getInstance()
                     val initial = if (auth.currentUser != null) "home_dispatch" else "register"
                     val screenState = remember { mutableStateOf(initial) }
+                    var showCreateTaskDialog by remember { mutableStateOf(false) }
 
                     DisposableEffect(Unit) {
                         val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
@@ -53,6 +44,21 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    val homeVm: HomeViewModel = viewModel(key = "home_vm_${auth.currentUser?.uid ?: "none"}")
+                    val taskVm: TaskViewModel = viewModel()
+                    val household by homeVm.household.collectAsState()
+                    val members by homeVm.members.collectAsState()
+
+                    if (showCreateTaskDialog && household != null) {
+                        CreateTaskDialog(
+                            members = members,
+                            onDismiss = { showCreateTaskDialog = false },
+                            onCreate = { title, desc, pts, assignedTo ->
+                                taskVm.createTask(title, desc, pts, household!!.id, assignedTo)
+                            }
+                        )
+                    }
+
                     when (screenState.value) {
                         "register" -> RegisterScreen(
                             onRegisterSuccess = { screenState.value = "home_dispatch" },
@@ -63,32 +69,31 @@ class MainActivity : ComponentActivity() {
                             onNavigateToRegister = { screenState.value = "register" }
                         )
                         "home_dispatch" -> HomeDispatch(
-                            sessionUserId = auth.currentUser?.uid,
+                            viewModel = homeVm,
                             onSignOut = {
                                 auth.signOut()
                                 screenState.value = "login"
                             },
-                            onCreateHouseholdRequested = {
-                                screenState.value = "create_household"
-                            },
-                            onJoinHouseholdRequested = {
-                                screenState.value = "join_household"
-                            }
+                            onCreateHouseholdRequested = { screenState.value = "create_household" },
+                            onJoinHouseholdRequested = { screenState.value = "join_household" },
+                            onNavigateToTasks = { screenState.value = "tasks" },
+                            onCreateTaskRequested = { showCreateTaskDialog = true }
                         )
                         "create_household" -> CreateHouseholdScreen(
-                            onHouseholdCreated = {
-                                screenState.value = "home_dispatch"
-                            }
+                            onHouseholdCreated = { screenState.value = "home_dispatch" }
                         )
                         "join_household" -> JoinHouseholdScreen(
-                            onJoinedHousehold = {
-                                screenState.value = "home_dispatch"
-                            },
-                            onBack = {
-                                screenState.value = "home_dispatch"
-                            }
+                            onHouseholdJoined = { screenState.value = "home_dispatch" },
+                            onBack = { screenState.value = "home_dispatch" }
                         )
-                        else -> RegisterScreen(onRegisterSuccess = { screenState.value = "home_dispatch" })
+                        "tasks" -> {
+                            TasksScreen(
+                                householdId = household?.id ?: "",
+                                members = members,
+                                onBack = { screenState.value = "home_dispatch" },
+                                viewModel = taskVm
+                            )
+                        }
                     }
                 }
             }
@@ -98,27 +103,22 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun HomeDispatch(
-    sessionUserId: String?,
+    viewModel: HomeViewModel,
     onSignOut: () -> Unit,
     onCreateHouseholdRequested: () -> Unit,
-    onJoinHouseholdRequested: () -> Unit
+    onJoinHouseholdRequested: () -> Unit,
+    onNavigateToTasks: () -> Unit,
+    onCreateTaskRequested: () -> Unit
 ) {
-    val viewModel: HomeViewModel = viewModel(key = "home_vm_${sessionUserId ?: "signed_out"}")
-
     val hasHousehold by viewModel.hasHousehold.collectAsState()
-    val household by viewModel.household.collectAsState()
-    val leaveInProgress by viewModel.leaveInProgress.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
 
     when (hasHousehold) {
         true -> HomeScreen(
             onSignOut = onSignOut,
             onLeaveHousehold = { viewModel.leaveHousehold() },
-            householdName = household?.name.orEmpty(),
-            householdCode = household?.joinCode.orEmpty(),
-            leaveInProgress = leaveInProgress,
-            errorMessage = errorMessage,
-            onDismissError = { viewModel.clearError() }
+            onNavigateToTasks = onNavigateToTasks,
+            onCreateTaskClick = onCreateTaskRequested,
+            viewModel = viewModel
         )
         false -> SetupHouseholdScreen(
             onCreateHouseholdClick = onCreateHouseholdRequested,

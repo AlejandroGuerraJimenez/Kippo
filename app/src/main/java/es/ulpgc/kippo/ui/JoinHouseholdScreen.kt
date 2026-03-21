@@ -30,7 +30,7 @@ import es.ulpgc.kippo.viewmodel.JoinHouseholdViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinHouseholdScreen(
-    onJoinedHousehold: () -> Unit,
+    onHouseholdJoined: () -> Unit,
     onBack: () -> Unit,
     viewModel: JoinHouseholdViewModel = viewModel()
 ) {
@@ -39,7 +39,7 @@ fun JoinHouseholdScreen(
 
     LaunchedEffect(joinState) {
         if (joinState is JoinHouseholdViewModel.JoinState.Success) {
-            onJoinedHousehold()
+            onHouseholdJoined()
         }
     }
 

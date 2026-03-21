@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import es.ulpgc.kippo.model.Household
+import es.ulpgc.kippo.model.User
 import es.ulpgc.kippo.repository.HouseholdRepository
 import es.ulpgc.kippo.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,9 @@ class HomeViewModel(
 
     private val _household = MutableStateFlow<Household?>(null)
     val household = _household.asStateFlow()
+
+    private val _members = MutableStateFlow<List<User>>(emptyList())
+    val members = _members.asStateFlow()
 
     private val _leaveInProgress = MutableStateFlow(false)
     val leaveInProgress = _leaveInProgress.asStateFlow()
@@ -46,17 +50,34 @@ class HomeViewModel(
         userRepository.observeUser(currentUser.uid)
             .onEach { user ->
                 currentHouseholdId = user?.current_household_id
-                _hasHousehold.value = currentHouseholdId != null
+                _hasHousehold.value = !currentHouseholdId.isNullOrBlank()
                 _errorMessage.value = null
 
-                if (currentHouseholdId != null) {
+                if (!currentHouseholdId.isNullOrBlank()) {
                     val householdResult = householdRepository.getUserHousehold(currentUser.uid)
-                    _household.value = householdResult.getOrNull()
+                    val householdData = householdResult.getOrNull()
+                    _household.value = householdData
+                    
+                    householdData?.let { 
+                        fetchMembers(it.members)
+                    }
                 } else {
                     _household.value = null
+                    _members.value = emptyList()
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun fetchMembers(uids: List<String>) {
+        viewModelScope.launch {
+            val result = userRepository.getUsers(uids)
+            result.onSuccess { userList ->
+                _members.value = userList
+            }.onFailure {
+                _members.value = emptyList()
+            }
+        }
     }
 
     fun leaveHousehold() {
@@ -71,7 +92,6 @@ class HomeViewModel(
                     _errorMessage.value = ex.message ?: "No se pudo abandonar el household"
                 }
                 _leaveInProgress.value = false
-                // El observador detectará el cambio y actualizará _hasHousehold automáticamente
             }
         }
     }

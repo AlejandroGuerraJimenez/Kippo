@@ -2,7 +2,11 @@ package es.ulpgc.kippo.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,26 +23,32 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import es.ulpgc.kippo.R
+import es.ulpgc.kippo.model.User
+import es.ulpgc.kippo.viewmodel.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onSignOut: () -> Unit = {},
     onLeaveHousehold: () -> Unit = {},
-    householdName: String = "",
-    householdCode: String = "",
-    leaveInProgress: Boolean = false,
-    errorMessage: String? = null,
-    onDismissError: () -> Unit = {}
+    onNavigateToTasks: () -> Unit = {},
+    onCreateTaskClick: () -> Unit = {},
+    viewModel: HomeViewModel = viewModel()
 ) {
+    val household by viewModel.household.collectAsState()
+    val members by viewModel.members.collectAsState()
+    val leaveInProgress by viewModel.leaveInProgress.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    
     var showLeaveDialog by remember { mutableStateOf(false) }
 
     if (showLeaveDialog) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false },
             title = { Text("Leave Household") },
-            text = { Text("Are you sure you want to leave this household? You will need an invitation to join again.") },
+            text = { Text("Are you sure you want to leave '${household?.name}'? You will need an invitation code to join again.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -58,8 +68,8 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = { KippoTopBar() },
-        bottomBar = { KippoBottomBar() },
+        topBar = { KippoTopBar(householdName = household?.name ?: "Home") },
+        bottomBar = { KippoBottomBar(onCreateClick = onCreateTaskClick, onTasksClick = onNavigateToTasks) },
         containerColor = KippoColors.Background
     ) { padding ->
         Column(
@@ -69,41 +79,26 @@ fun HomeScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            ActionButtonsRow()
+            // Members Section
+            MembersSection(members)
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "Welcome to your Home",
-                color = KippoColors.DarkText,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Medium
-            )
+            ActionButtonsRow(onTasksClick = onNavigateToTasks)
 
-            if (householdName.isNotBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = householdName,
-                    color = KippoColors.DarkText,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Spacer(modifier = Modifier.height(24.dp))
 
-            if (householdCode.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Join code: $householdCode",
-                    color = KippoColors.DarkText.copy(alpha = 0.75f),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+            household?.let { h ->
+                InviteCodeCard(h.joinCode)
             }
 
             if (!errorMessage.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = onDismissError) {
-                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
-                }
+                Text(
+                    text = errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -138,63 +133,144 @@ fun HomeScreen(
 }
 
 @Composable
-fun ActionButtonsRow() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+fun MembersSection(members: List<User>) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Household Members",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = KippoColors.DarkText
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(end = 16.dp)
+        ) {
+            items(members) { member ->
+                MemberItem(member)
+            }
+        }
+    }
+}
+
+@Composable
+fun MemberItem(user: User) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(70.dp)
     ) {
-        Button(
-            onClick = { },
+        Box(
             modifier = Modifier
-                .weight(1f)
-                .height(54.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
-            shape = RoundedCornerShape(27.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp)
+                .size(60.dp)
+                .clip(CircleShape)
+                .background(KippoColors.Teal.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.TaskAlt,
+                imageVector = Icons.Default.Person,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "TASKS",
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 0.5.sp
+                tint = KippoColors.Teal,
+                modifier = Modifier.size(35.dp)
             )
         }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = if (user.username.isNotBlank()) user.username else "User",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            color = KippoColors.DarkText,
+            maxLines = 1
+        )
+    }
+}
 
-        Button(
-            onClick = { },
-            modifier = Modifier
-                .weight(1f)
-                .height(54.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Yellow),
-            shape = RoundedCornerShape(27.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp)
+@Composable
+fun InviteCodeCard(code: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Default.CardGiftcard,
-                contentDescription = null,
-                tint = KippoColors.DarkText,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(Modifier.width(8.dp))
             Text(
-                text = "REWARDS",
-                color = KippoColors.DarkText,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 0.5.sp
+                text = "Household Invite Code",
+                style = MaterialTheme.typography.titleSmall,
+                color = KippoColors.DarkText.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = code,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = KippoColors.Teal,
+                letterSpacing = 4.sp
             )
         }
     }
 }
 
 @Composable
-fun KippoTopBar() {
+fun ActionButtonsRow(onTasksClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Button(
+            onClick = onTasksClick,
+            modifier = Modifier
+                .weight(1f)
+                .height(80.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.TaskAlt,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "TASKS",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        Button(
+            onClick = { /* Navigate to Rewards */ },
+            modifier = Modifier
+                .weight(1f)
+                .height(80.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Yellow),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.EmojiEvents,
+                    contentDescription = null,
+                    tint = KippoColors.DarkText,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "REWARDS",
+                    color = KippoColors.DarkText,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun KippoTopBar(householdName: String = "Home") {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -224,7 +300,7 @@ fun KippoTopBar() {
                 color = KippoColors.DarkText
             )
             Text(
-                text = "Home",
+                text = householdName,
                 fontSize = 15.sp,
                 color = KippoColors.DarkText.copy(alpha = 0.6f)
             )
@@ -250,7 +326,7 @@ fun KippoTopBar() {
 }
 
 @Composable
-fun KippoBottomBar() {
+fun KippoBottomBar(onCreateClick: () -> Unit = {}, onTasksClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -271,16 +347,16 @@ fun KippoBottomBar() {
             ) {
                 IconButton(onClick = { }) {
                     Icon(
-                        Icons.Default.Home,
-                        contentDescription = "Home",
+                        Icons.Default.Home, 
+                        contentDescription = "Home", 
                         tint = KippoColors.Teal,
                         modifier = Modifier.size(28.dp)
                     )
                 }
-                IconButton(onClick = { }) {
+                IconButton(onClick = onTasksClick) {
                     Icon(
-                        Icons.Default.BusinessCenter,
-                        contentDescription = "Tasks",
+                        Icons.Default.TaskAlt, 
+                        contentDescription = "Tasks", 
                         tint = Color.LightGray,
                         modifier = Modifier.size(28.dp)
                     )
@@ -290,16 +366,16 @@ fun KippoBottomBar() {
 
                 IconButton(onClick = { }) {
                     Icon(
-                        Icons.Default.CalendarMonth,
-                        contentDescription = "Calendar",
+                        Icons.Default.CalendarMonth, 
+                        contentDescription = "Calendar", 
                         tint = Color.LightGray,
                         modifier = Modifier.size(28.dp)
                     )
                 }
                 IconButton(onClick = { }) {
                     Icon(
-                        Icons.Outlined.Person,
-                        contentDescription = "Profile",
+                        Icons.Outlined.Person, 
+                        contentDescription = "Profile", 
                         tint = Color.LightGray,
                         modifier = Modifier.size(28.dp)
                     )
@@ -313,7 +389,8 @@ fun KippoBottomBar() {
             modifier = Modifier
                 .size(74.dp)
                 .align(Alignment.TopCenter)
-                .offset(y = (-12).dp),
+                .offset(y = (-12).dp)
+                .clickable { onCreateClick() },
             shadowElevation = 6.dp,
             border = BorderStroke(4.dp, Color.White)
         ) {
