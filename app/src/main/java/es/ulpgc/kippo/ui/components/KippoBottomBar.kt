@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.outlined.Person
@@ -35,7 +35,7 @@ import es.ulpgc.kippo.ui.KippoColors
 enum class BottomNavDestination {
     HOME,
     TASKS,
-    CALENDAR,
+    GASTOS,
     PROFILE
 }
 
@@ -45,7 +45,7 @@ fun KippoBottomBar(
     onHomeClick: () -> Unit,
     onTasksClick: () -> Unit,
     onCreateClick: () -> Unit,
-    onCalendarClick: () -> Unit = {},
+    onGastosClick: () -> Unit = {},
     onProfileClick: () -> Unit
 ) {
     Box(
@@ -85,11 +85,11 @@ fun KippoBottomBar(
 
                 Spacer(modifier = Modifier.width(60.dp))
 
-                IconButton(onClick = onCalendarClick) {
+                IconButton(onClick = onGastosClick) {
                     Icon(
-                        Icons.Default.CalendarMonth,
-                        contentDescription = "Calendar",
-                        tint = if (selectedDestination == BottomNavDestination.CALENDAR) KippoColors.Teal else Color.LightGray,
+                        Icons.Default.AccountBalanceWallet,
+                        contentDescription = "Gastos",
+                        tint = if (selectedDestination == BottomNavDestination.GASTOS) KippoColors.Teal else Color.LightGray,
                         modifier = Modifier.size(28.dp)
                     )
                 }

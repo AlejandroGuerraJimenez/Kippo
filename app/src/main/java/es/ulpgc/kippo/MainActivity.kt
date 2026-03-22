@@ -13,7 +13,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.LocalDate
+import java.time.ZoneId
 import es.ulpgc.kippo.ui.*
+import es.ulpgc.kippo.viewmodel.ExpenseViewModel
 import es.ulpgc.kippo.viewmodel.HomeViewModel
 import es.ulpgc.kippo.viewmodel.TaskViewModel
 
@@ -30,6 +33,8 @@ class MainActivity : ComponentActivity() {
                     val initial = if (auth.currentUser != null) "home_dispatch" else "register"
                     val screenState = remember { mutableStateOf(initial) }
                     var showCreateTaskDialog by remember { mutableStateOf(false) }
+                    var showAddExpenseDialog by remember { mutableStateOf(false) }
+                    var showCreatePicker by remember { mutableStateOf(false) }
 
                     DisposableEffect(Unit) {
                         val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
@@ -46,7 +51,23 @@ class MainActivity : ComponentActivity() {
 
                     val homeVm: HomeViewModel = viewModel(key = "home_vm_${auth.currentUser?.uid ?: "none"}")
                     val taskVm: TaskViewModel = viewModel()
+                    val expenseVm: ExpenseViewModel = viewModel()
                     val household by homeVm.household.collectAsState()
+                    val allTasks by taskVm.tasks.collectAsState()
+
+                    // Observe tasks as soon as household is available so CalendarWidget has data
+                    LaunchedEffect(household?.id) {
+                        household?.id?.let { taskVm.observeTasks(it) }
+                    }
+
+                    val pendingTaskDates = remember(allTasks) {
+                        allTasks
+                            .filter { !it.completed && it.dueDate != null }
+                            .mapNotNull { task ->
+                                task.dueDate?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                            }
+                            .toSet()
+                    }
                     val members by homeVm.members.collectAsState()
                     val currentUserProfile by homeVm.currentUserProfile.collectAsState()
                     val profileUpdateInProgress by homeVm.profileUpdateInProgress.collectAsState()
@@ -56,9 +77,28 @@ class MainActivity : ComponentActivity() {
                         CreateTaskDialog(
                             members = members,
                             onDismiss = { showCreateTaskDialog = false },
-                            onCreate = { title, desc, pts, assignedTo ->
-                                taskVm.createTask(title, desc, pts, household!!.id, assignedTo)
+                            onCreate = { title, desc, pts, assignedTo, recurrence, dueDate ->
+                                taskVm.createTask(title, desc, pts, household!!.id, assignedTo, recurrence, dueDate)
                             }
+                        )
+                    }
+
+                    if (showAddExpenseDialog && household != null) {
+                        AddExpenseDialog(
+                            members = members,
+                            currentUserId = auth.currentUser?.uid ?: "",
+                            onDismiss = { showAddExpenseDialog = false },
+                            onAdd = { title, amount, paidBy, splitAmong, category, notes, customSplits ->
+                                expenseVm.addExpense(title, amount, paidBy, splitAmong, category, notes, customSplits)
+                            }
+                        )
+                    }
+
+                    if (showCreatePicker) {
+                        CreatePickerSheet(
+                            onDismiss = { showCreatePicker = false },
+                            onSelectTask = { showCreateTaskDialog = true },
+                            onSelectExpense = { showAddExpenseDialog = true }
                         )
                     }
 
@@ -80,8 +120,10 @@ class MainActivity : ComponentActivity() {
                             onCreateHouseholdRequested = { screenState.value = "create_household" },
                             onJoinHouseholdRequested = { screenState.value = "join_household" },
                             onNavigateToTasks = { screenState.value = "tasks" },
-                            onCreateTaskRequested = { showCreateTaskDialog = true },
-                            onNavigateToHouseholdProfile = { screenState.value = "household_profile" }
+                            onNavigateToGastos = { screenState.value = "gastos" },
+                            onCreateTaskRequested = { showCreatePicker = true },
+                            onNavigateToHouseholdProfile = { screenState.value = "household_profile" },
+                            pendingTaskDates = pendingTaskDates
                         )
                         "create_household" -> CreateHouseholdScreen(
                             onHouseholdCreated = { screenState.value = "home_dispatch" }
@@ -96,11 +138,23 @@ class MainActivity : ComponentActivity() {
                                 members = members,
                                 onBack = { screenState.value = "home_dispatch" },
                                 onNavigateHome = { screenState.value = "home_dispatch" },
-                                onNavigateProfile = { 
-                                    screenState.value = "home_dispatch" 
+                                onNavigateProfile = {
+                                    screenState.value = "home_dispatch"
                                 },
-                                onCreateTaskClick = { showCreateTaskDialog = true },
+                                onNavigateToGastos = { screenState.value = "gastos" },
+                                onCreateTaskClick = { showCreatePicker = true },
                                 viewModel = taskVm
+                            )
+                        }
+                        "gastos" -> {
+                            GastosScreen(
+                                householdId = household?.id ?: "",
+                                members = members,
+                                currentUserId = auth.currentUser?.uid ?: "",
+                                onNavigateHome = { screenState.value = "home_dispatch" },
+                                onNavigateToTasks = { screenState.value = "tasks" },
+                                onAddExpenseClick = { showCreatePicker = true },
+                                viewModel = expenseVm
                             )
                         }
                         "household_profile" -> {
@@ -130,8 +184,10 @@ fun HomeDispatch(
     onCreateHouseholdRequested: () -> Unit,
     onJoinHouseholdRequested: () -> Unit,
     onNavigateToTasks: () -> Unit,
+    onNavigateToGastos: () -> Unit = {},
     onCreateTaskRequested: () -> Unit,
-    onNavigateToHouseholdProfile: () -> Unit
+    onNavigateToHouseholdProfile: () -> Unit,
+    pendingTaskDates: Set<LocalDate> = emptySet()
 ) {
     val hasHousehold by viewModel.hasHousehold.collectAsState()
     val household by viewModel.household.collectAsState()
@@ -152,8 +208,10 @@ fun HomeDispatch(
             profileUpdateInProgress = profileUpdateInProgress,
             onEditProfile = { name, username -> viewModel.updateProfile(name, username) },
             onNavigateToTasks = onNavigateToTasks,
+            onNavigateToGastos = onNavigateToGastos,
             onCreateTaskClick = onCreateTaskRequested,
             onNavigateToHouseholdProfile = onNavigateToHouseholdProfile,
+            pendingTaskDates = pendingTaskDates,
             viewModel = viewModel
         )
         false -> SetupHouseholdScreen(

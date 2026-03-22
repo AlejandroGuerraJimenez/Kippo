@@ -14,5 +14,7 @@ data class Task(
     val householdId: String = "",
     @ServerTimestamp val createdAt: Date? = null,
     val completedAt: Date? = null,
-    val completedBy: String? = null
+    val completedBy: String? = null,
+    val recurrence: String = "none", // "none" | "daily" | "weekly" | "biweekly" | "monthly"
+    val dueDate: Date? = null
 )

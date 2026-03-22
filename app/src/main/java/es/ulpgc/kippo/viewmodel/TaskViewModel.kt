@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import es.ulpgc.kippo.model.Task
 import es.ulpgc.kippo.repository.TaskRepository
+import java.util.Date
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +41,7 @@ class TaskViewModel(
         }
     }
 
-    fun createTask(title: String, description: String, points: Long, householdId: String, assignedTo: String?) {
+    fun createTask(title: String, description: String, points: Long, householdId: String, assignedTo: String?, recurrence: String = "none", dueDate: Date? = null) {
         val newTask = Task(
             title = title,
             description = description,
@@ -49,7 +50,9 @@ class TaskViewModel(
             assignedTo = assignedTo,
             completed = false,
             completedAt = null,
-            completedBy = null
+            completedBy = null,
+            recurrence = recurrence,
+            dueDate = dueDate
         )
         viewModelScope.launch {
             taskRepository.createTask(newTask)
@@ -72,13 +75,15 @@ class TaskViewModel(
         }
     }
 
-    fun updateTask(taskId: String, title: String, description: String, points: Long, assignedTo: String?) {
+    fun updateTask(taskId: String, title: String, description: String, points: Long, assignedTo: String?, recurrence: String = "none", dueDate: Date? = null) {
         if (currentHouseholdId.isBlank()) return
         val updates = mapOf(
             "title" to title,
             "description" to description,
             "points" to points,
-            "assignedTo" to assignedTo
+            "assignedTo" to assignedTo,
+            "recurrence" to recurrence,
+            "dueDate" to dueDate
         )
         viewModelScope.launch {
             taskRepository.updateTask(currentHouseholdId, taskId, updates)

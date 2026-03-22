@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,7 +31,20 @@ import es.ulpgc.kippo.ui.components.BottomNavDestination
 import es.ulpgc.kippo.ui.components.KippoBottomBar
 import es.ulpgc.kippo.viewmodel.TaskViewModel
 import java.text.SimpleDateFormat
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.TextStyle
 import java.util.*
+
+private data class RecurrenceOption(val key: String, val label: String, val shortLabel: String)
+private val recurrenceOptions = listOf(
+    RecurrenceOption("none",      "Sin repetición", ""),
+    RecurrenceOption("daily",     "Diaria",         "Diaria"),
+    RecurrenceOption("weekly",    "Semanal",        "Semanal"),
+    RecurrenceOption("biweekly",  "Quincenal",      "Quincenal"),
+    RecurrenceOption("monthly",   "Mensual",        "Mensual")
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,12 +54,14 @@ fun TasksScreen(
     onBack: () -> Unit,
     onNavigateHome: () -> Unit,
     onNavigateProfile: () -> Unit,
+    onNavigateToGastos: () -> Unit = {},
     onCreateTaskClick: () -> Unit,
     viewModel: TaskViewModel = viewModel()
 ) {
     val tasks by viewModel.tasks.collectAsState()
     var selectedTask by remember { mutableStateOf<Task?>(null) }
     var taskToEdit by remember { mutableStateOf<Task?>(null) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(householdId) {
         viewModel.observeTasks(householdId)
@@ -72,8 +88,8 @@ fun TasksScreen(
             task = taskToEdit!!,
             members = members,
             onDismiss = { taskToEdit = null },
-            onUpdate = { title, desc, pts, assignedTo ->
-                viewModel.updateTask(taskToEdit!!.id, title, desc, pts, assignedTo)
+            onUpdate = { title, desc, pts, assignedTo, recurrence, dueDate ->
+                viewModel.updateTask(taskToEdit!!.id, title, desc, pts, assignedTo, recurrence, dueDate)
             }
         )
     }
@@ -98,32 +114,76 @@ fun TasksScreen(
                 onHomeClick = onNavigateHome,
                 onTasksClick = {},
                 onCreateClick = onCreateTaskClick,
+                onGastosClick = onNavigateToGastos,
                 onProfileClick = onNavigateProfile
             )
         },
         containerColor = KippoColors.Background
     ) { padding ->
-        if (tasks.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No tasks yet. Create one!", color = KippoColors.DarkText.copy(alpha = 0.5f))
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = KippoColors.Background,
+                contentColor = KippoColors.Teal
             ) {
-                items(tasks) { task ->
-                    TaskItem(
-                        task = task, 
-                        members = members,
-                        onToggle = { viewModel.toggleTask(task.id, !task.completed) },
-                        onClick = { selectedTask = task }
-                    )
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Text(
+                            "Todas",
+                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedTab == 0) KippoColors.Teal else KippoColors.DarkText.copy(alpha = 0.5f)
+                        )
+                    }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Text(
+                            "Esta semana",
+                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedTab == 1) KippoColors.Teal else KippoColors.DarkText.copy(alpha = 0.5f)
+                        )
+                    }
+                )
+            }
+
+            if (selectedTab == 0) {
+                if (tasks.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Sin tareas. ¡Crea una!", color = KippoColors.DarkText.copy(alpha = 0.5f))
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(vertical = 16.dp)
+                    ) {
+                        items(tasks) { task ->
+                            TaskItem(
+                                task = task,
+                                members = members,
+                                onToggle = { viewModel.toggleTask(task.id, !task.completed) },
+                                onClick = { selectedTask = task }
+                            )
+                        }
+                    }
                 }
+            } else {
+                WeeklyTaskView(
+                    tasks = tasks,
+                    members = members,
+                    onToggle = { task -> viewModel.toggleTask(task.id, !task.completed) },
+                    onTaskClick = { selectedTask = it }
+                )
             }
         }
     }
@@ -168,9 +228,17 @@ fun TaskItem(task: Task, members: List<User>, onToggle: () -> Unit, onClick: () 
                     color = if (task.completed) KippoColors.DarkText.copy(alpha = 0.5f) else KippoColors.DarkText
                 )
                 
-                if (task.completed && task.completedAt != null) {
+                if (task.dueDate != null && !task.completed) {
+                    val isOverdue = task.dueDate.before(Date())
                     Text(
-                        text = "Completed: ${dateFormat.format(task.completedAt)}",
+                        text = "Vence: ${dateFormat.format(task.dueDate)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isOverdue) Color(0xFFE53935) else KippoColors.DarkText.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Medium
+                    )
+                } else if (task.completed && task.completedAt != null) {
+                    Text(
+                        text = "Completada: ${dateFormat.format(task.completedAt)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = KippoColors.Teal,
                         fontWeight = FontWeight.Medium
@@ -191,16 +259,225 @@ fun TaskItem(task: Task, members: List<User>, onToggle: () -> Unit, onClick: () 
                 }
             }
             
-            Surface(
-                color = if (task.completed) Color.LightGray.copy(alpha = 0.2f) else KippoColors.Yellow.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(8.dp)
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Surface(
+                    color = if (task.completed) Color.LightGray.copy(alpha = 0.2f) else KippoColors.Yellow.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "${task.points} PTS",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (task.completed) Color.Gray else KippoColors.DarkText
+                    )
+                }
+                val recOpt = recurrenceOptions.find { it.key == task.recurrence }
+                if (recOpt != null && recOpt.key != "none") {
+                    Surface(
+                        color = KippoColors.Teal.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Repeat,
+                                contentDescription = null,
+                                tint = KippoColors.Teal,
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Text(
+                                text = recOpt.shortLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = KippoColors.Teal,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WeeklyTaskView(
+    tasks: List<Task>,
+    members: List<User>,
+    onToggle: (Task) -> Unit,
+    onTaskClick: (Task) -> Unit
+) {
+    var weekOffset by remember { mutableIntStateOf(0) }
+    val today = remember { LocalDate.now() }
+    val monday = remember(weekOffset) {
+        today.with(DayOfWeek.MONDAY).plusWeeks(weekOffset.toLong())
+    }
+    val weekDays = remember(monday) { (0..6).map { monday.plusDays(it.toLong()) } }
+
+    fun Date.toLocalDate(): LocalDate =
+        toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+
+    val tasksByDay = remember(tasks, weekDays) {
+        weekDays.associateWith { day ->
+            tasks.filter { it.dueDate?.toLocalDate() == day }
+        }
+    }
+    val recurringNoDueDate = remember(tasks) {
+        tasks.filter { it.recurrence != "none" && it.dueDate == null && !it.completed }
+    }
+
+    val monthYearFormat = remember { SimpleDateFormat("MMM yyyy", Locale("es")) }
+    val dayMonthFormat = remember { SimpleDateFormat("dd MMM", Locale("es")) }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        // Week navigation header
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(onClick = { weekOffset-- }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = KippoColors.Teal)
+                }
                 Text(
-                    text = "${task.points} PTS",
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (task.completed) Color.Gray else KippoColors.DarkText
+                    text = if (weekOffset == 0) "Esta semana"
+                           else "Semana del ${dayMonthFormat.format(Date.from(monday.atStartOfDay(ZoneId.systemDefault()).toInstant()))}",
+                    modifier = Modifier.weight(1f),
+                    fontWeight = FontWeight.Bold,
+                    color = KippoColors.DarkText,
+                    style = MaterialTheme.typography.titleSmall,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                IconButton(onClick = { weekOffset++ }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = KippoColors.Teal)
+                }
+            }
+        }
+
+        // Day sections
+        weekDays.forEach { day ->
+            val dayTasks = tasksByDay[day] ?: emptyList()
+            val isToday = day == today
+            val dayName = day.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es"))
+                .replaceFirstChar { it.uppercase() }
+
+            item(key = day.toString()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(
+                                if (isToday) KippoColors.Teal else KippoColors.Teal.copy(alpha = 0.1f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = day.dayOfMonth.toString(),
+                            fontWeight = FontWeight.Bold,
+                            color = if (isToday) Color.White else KippoColors.Teal,
+                            fontSize = 14.sp
+                        )
+                    }
+                    Column {
+                        Text(
+                            dayName,
+                            fontWeight = if (isToday) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            color = if (isToday) KippoColors.Teal else KippoColors.DarkText,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            dayMonthFormat.format(Date.from(day.atStartOfDay(ZoneId.systemDefault()).toInstant())),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = KippoColors.DarkText.copy(alpha = 0.4f)
+                        )
+                    }
+                    if (dayTasks.isNotEmpty()) {
+                        Spacer(Modifier.weight(1f))
+                        Surface(
+                            color = KippoColors.Yellow.copy(alpha = 0.3f),
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                "${dayTasks.size}",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = KippoColors.DarkText
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (dayTasks.isEmpty()) {
+                item(key = "${day}_empty") {
+                    Text(
+                        "Sin tareas",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 46.dp, bottom = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = KippoColors.DarkText.copy(alpha = 0.3f)
+                    )
+                }
+            } else {
+                items(dayTasks, key = { it.id }) { task ->
+                    Box(modifier = Modifier.padding(start = 46.dp)) {
+                        TaskItem(
+                            task = task,
+                            members = members,
+                            onToggle = { onToggle(task) },
+                            onClick = { onTaskClick(task) }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Recurring tasks without due date
+        if (recurringNoDueDate.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.Repeat, contentDescription = null, tint = KippoColors.Teal, modifier = Modifier.size(18.dp))
+                    Text(
+                        "Recurrentes sin fecha",
+                        fontWeight = FontWeight.Bold,
+                        color = KippoColors.DarkText,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            items(recurringNoDueDate, key = { "rec_${it.id}" }) { task ->
+                TaskItem(
+                    task = task,
+                    members = members,
+                    onToggle = { onToggle(task) },
+                    onClick = { onTaskClick(task) }
                 )
             }
         }
@@ -233,9 +510,13 @@ fun TaskDetailDialog(task: Task, members: List<User>, onDismiss: () -> Unit, onE
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 }
                 
-                DetailRow(label = "Status:", value = if (task.completed) "Completed " else "Pending ")
+                DetailRow(label = "Status:", value = if (task.completed) "Completed ✓" else "Pending")
                 DetailRow(label = "Points:", value = "${task.points} PTS")
                 DetailRow(label = "Assigned to:", value = assignedUser?.username ?: "Anyone")
+                DetailRow(
+                    label = "Recurrence:",
+                    value = recurrenceOptions.find { it.key == task.recurrence }?.label ?: "Sin repetición"
+                )
                 DetailRow(label = "Created on:", value = task.createdAt?.let { dateFormat.format(it) } ?: "N/A")
                 
                 if (task.completed) {
@@ -260,17 +541,42 @@ fun DetailRow(label: String, value: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateTaskDialog(
     members: List<User>,
     onDismiss: () -> Unit,
-    onCreate: (String, String, Long, String?) -> Unit
+    onCreate: (String, String, Long, String?, String, Date?) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var points by remember { mutableStateOf("10") }
     var assignedTo by remember { mutableStateOf<String?>(null) }
+    var selectedRecurrence by remember { mutableStateOf("none") }
+    var dueDateMillis by remember { mutableStateOf<Long?>(null) }
+    var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
+    val dateDisplayFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale("es")) }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = dueDateMillis ?: System.currentTimeMillis()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dueDateMillis = datePickerState.selectedDateMillis
+                    showDatePicker = false
+                }) { Text("Aceptar", color = KippoColors.Teal) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancelar", color = KippoColors.DarkTeal)
+                }
+            }
+        ) { DatePicker(state = datePickerState) }
+    }
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = KippoColors.Teal,
         unfocusedBorderColor = KippoColors.DarkTeal.copy(alpha = 0.3f),
@@ -347,7 +653,7 @@ fun CreateTaskDialog(
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                         }
                         DropdownMenu(
-                            expanded = expanded, 
+                            expanded = expanded,
                             onDismissRequest = { expanded = false },
                             modifier = Modifier.fillMaxWidth(0.8f)
                         ) {
@@ -364,13 +670,76 @@ fun CreateTaskDialog(
                         }
                     }
                 }
+
+                // Fecha de vencimiento
+                Column {
+                    Text(
+                        text = "Fecha de vencimiento",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = KippoColors.DarkText.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                    )
+                    OutlinedButton(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = KippoColors.DarkText),
+                        border = BorderStroke(1.dp, KippoColors.DarkTeal.copy(alpha = 0.3f))
+                    ) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = KippoColors.Teal, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = dueDateMillis?.let { dateDisplayFormat.format(Date(it)) } ?: "Sin fecha",
+                            modifier = Modifier.weight(1f),
+                            color = if (dueDateMillis != null) KippoColors.Teal else KippoColors.DarkText.copy(alpha = 0.5f)
+                        )
+                        if (dueDateMillis != null) {
+                            IconButton(onClick = { dueDateMillis = null }, modifier = Modifier.size(20.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
+
+                Column {
+                    Text(
+                        text = "Repetición",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = KippoColors.DarkText.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(recurrenceOptions) { opt ->
+                            FilterChip(
+                                selected = selectedRecurrence == opt.key,
+                                onClick = { selectedRecurrence = opt.key },
+                                label = { Text(opt.label, fontSize = 12.sp) },
+                                leadingIcon = if (opt.key != "none") {
+                                    {
+                                        Icon(
+                                            Icons.Default.Repeat,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                } else null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = KippoColors.Teal,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White
+                                )
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        onCreate(title, description, points.toLongOrNull() ?: 0L, assignedTo)
+                        val dueDate = dueDateMillis?.let { Date(it) }
+                        onCreate(title, description, points.toLongOrNull() ?: 0L, assignedTo, selectedRecurrence, dueDate)
                         onDismiss()
                     }
                 },
@@ -395,18 +764,43 @@ fun CreateTaskDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditTaskDialog(
     task: Task,
     members: List<User>,
     onDismiss: () -> Unit,
-    onUpdate: (String, String, Long, String?) -> Unit
+    onUpdate: (String, String, Long, String?, String, Date?) -> Unit
 ) {
     var title by remember { mutableStateOf(task.title) }
     var description by remember { mutableStateOf(task.description) }
     var points by remember { mutableStateOf(task.points.toString()) }
     var assignedTo by remember { mutableStateOf(task.assignedTo) }
+    var selectedRecurrence by remember { mutableStateOf(task.recurrence) }
+    var dueDateMillis by remember { mutableStateOf<Long?>(task.dueDate?.time) }
+    var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
+    val dateDisplayFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale("es")) }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = dueDateMillis ?: System.currentTimeMillis()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dueDateMillis = datePickerState.selectedDateMillis
+                    showDatePicker = false
+                }) { Text("Aceptar", color = KippoColors.Teal) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancelar", color = KippoColors.DarkTeal)
+                }
+            }
+        ) { DatePicker(state = datePickerState) }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -468,13 +862,73 @@ fun EditTaskDialog(
                         }
                     }
                 }
+
+                Column {
+                    Text(
+                        "Fecha de vencimiento",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    OutlinedButton(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = KippoColors.Teal, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = dueDateMillis?.let { dateDisplayFormat.format(Date(it)) } ?: "Sin fecha",
+                            modifier = Modifier.weight(1f),
+                            color = if (dueDateMillis != null) KippoColors.Teal else Color.Gray
+                        )
+                        if (dueDateMillis != null) {
+                            IconButton(onClick = { dueDateMillis = null }, modifier = Modifier.size(20.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
+
+                Column {
+                    Text(
+                        "Repetición",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(recurrenceOptions) { opt ->
+                            FilterChip(
+                                selected = selectedRecurrence == opt.key,
+                                onClick = { selectedRecurrence = opt.key },
+                                label = { Text(opt.label, fontSize = 12.sp) },
+                                leadingIcon = if (opt.key != "none") {
+                                    {
+                                        Icon(
+                                            Icons.Default.Repeat,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                } else null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = KippoColors.Teal,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White
+                                )
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        onUpdate(title, description, points.toLongOrNull() ?: 0L, assignedTo)
+                        val dueDate = dueDateMillis?.let { Date(it) }
+                        onUpdate(title, description, points.toLongOrNull() ?: 0L, assignedTo, selectedRecurrence, dueDate)
                         onDismiss()
                     }
                 },

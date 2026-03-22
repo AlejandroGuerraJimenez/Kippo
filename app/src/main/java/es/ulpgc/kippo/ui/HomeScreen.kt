@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,6 +27,10 @@ import es.ulpgc.kippo.model.User
 import es.ulpgc.kippo.viewmodel.HomeViewModel
 import es.ulpgc.kippo.ui.components.BottomNavDestination
 import es.ulpgc.kippo.ui.components.KippoBottomBar
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.TextStyle
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +38,8 @@ fun HomeScreen(
     onSignOut: () -> Unit = {},
     onLeaveHousehold: () -> Unit = {},
     onNavigateToTasks: () -> Unit = {},
+    onNavigateToGastos: () -> Unit = {},
+    pendingTaskDates: Set<LocalDate> = emptySet(),
     onCreateTaskClick: () -> Unit = {},
     onNavigateToHouseholdProfile: () -> Unit = {},
     profileName: String = "",
@@ -79,6 +86,7 @@ fun HomeScreen(
                 onHomeClick = { currentSection = BottomNavDestination.HOME },
                 onTasksClick = onNavigateToTasks,
                 onCreateClick = onCreateTaskClick,
+                onGastosClick = onNavigateToGastos,
                 onProfileClick = { currentSection = BottomNavDestination.PROFILE }
             )
         },
@@ -92,22 +100,11 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (currentSection == BottomNavDestination.HOME) {
-                ActionButtonsRow(onTasksClick = onNavigateToTasks)
-                
-                Spacer(modifier = Modifier.height(40.dp))
+                ActionButtonsRow(onTasksClick = onNavigateToTasks, onGastosClick = onNavigateToGastos)
 
-                Text(
-                    text = "Welcome back!",
-                    color = KippoColors.DarkText,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Text(
-                    text = "What would you like to do today?",
-                    color = KippoColors.DarkText.copy(alpha = 0.6f),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                Spacer(modifier = Modifier.height(20.dp))
+
+                CalendarWidget(pendingDates = pendingTaskDates)
             } else if (currentSection == BottomNavDestination.PROFILE) {
                 ProfileSection(
                     name = profileName,
@@ -136,56 +133,348 @@ fun HomeScreen(
 }
 
 @Composable
-fun ActionButtonsRow(onTasksClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Button(
-            onClick = onTasksClick,
-            modifier = Modifier
-                .weight(1f)
-                .height(80.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
-            shape = RoundedCornerShape(16.dp)
+fun ActionButtonsRow(onTasksClick: () -> Unit, onGastosClick: () -> Unit = {}) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Default.TaskAlt,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "TASKS",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 12.sp
-                )
+            Button(
+                onClick = onTasksClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(80.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.TaskAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "TAREAS",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            Button(
+                onClick = onGastosClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(80.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = KippoColors.DarkTeal),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.AccountBalanceWallet,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "GASTOS",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
 
         Button(
             onClick = { /* Navigate to Rewards */ },
             modifier = Modifier
-                .weight(1f)
+                .fillMaxWidth()
                 .height(80.dp),
             colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Yellow),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
                 Icon(
                     imageVector = Icons.Default.EmojiEvents,
                     contentDescription = null,
                     tint = KippoColors.DarkText,
                     modifier = Modifier.size(28.dp)
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "REWARDS",
+                    text = "RECOMPENSAS",
                     color = KippoColors.DarkText,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 12.sp
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreatePickerSheet(
+    onDismiss: () -> Unit,
+    onSelectTask: () -> Unit,
+    onSelectExpense: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "¿Qué quieres añadir?",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = KippoColors.DarkText,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+
+            Card(
+                onClick = { onSelectTask(); onDismiss() },
+                colors = CardDefaults.cardColors(containerColor = KippoColors.Teal.copy(alpha = 0.08f)),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(KippoColors.Teal, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.TaskAlt,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            "Nueva tarea",
+                            fontWeight = FontWeight.Bold,
+                            color = KippoColors.DarkText,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            "Asigna una tarea al hogar",
+                            color = KippoColors.DarkText.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = KippoColors.Teal
+                    )
+                }
+            }
+
+            Card(
+                onClick = { onSelectExpense(); onDismiss() },
+                colors = CardDefaults.cardColors(containerColor = KippoColors.DarkTeal.copy(alpha = 0.08f)),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(KippoColors.DarkTeal, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.AccountBalanceWallet,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            "Nuevo gasto",
+                            fontWeight = FontWeight.Bold,
+                            color = KippoColors.DarkText,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            "Registra un gasto compartido",
+                            color = KippoColors.DarkText.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = KippoColors.DarkTeal
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
+    val today = remember { LocalDate.now() }
+    var displayedMonth by remember { mutableStateOf(YearMonth.now()) }
+
+    val monthName = displayedMonth.month
+        .getDisplayName(TextStyle.FULL, Locale("es"))
+        .replaceFirstChar { it.uppercase() }
+
+    val firstDayOfMonth = displayedMonth.atDay(1)
+    // Monday = 1 ... Sunday = 7, we want Monday as first column (index 0)
+    val startOffset = (firstDayOfMonth.dayOfWeek.value - 1)
+    val daysInMonth = displayedMonth.lengthOfMonth()
+
+    val dayLabels = listOf("L", "M", "X", "J", "V", "S", "D")
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header: month nav
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { displayedMonth = displayedMonth.minusMonths(1) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.ChevronLeft,
+                        contentDescription = "Mes anterior",
+                        tint = KippoColors.Teal
+                    )
+                }
+                Text(
+                    text = "$monthName ${displayedMonth.year}",
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold,
+                    color = KippoColors.DarkText,
+                    fontSize = 15.sp
+                )
+                IconButton(
+                    onClick = { displayedMonth = displayedMonth.plusMonths(1) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = "Mes siguiente",
+                        tint = KippoColors.Teal
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Day headers
+            Row(modifier = Modifier.fillMaxWidth()) {
+                dayLabels.forEach { label ->
+                    Text(
+                        text = label,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = KippoColors.DarkText.copy(alpha = 0.4f)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Day cells
+            val totalCells = startOffset + daysInMonth
+            val rows = (totalCells + 6) / 7
+
+            for (row in 0 until rows) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    for (col in 0 until 7) {
+                        val cellIndex = row * 7 + col
+                        val day = cellIndex - startOffset + 1
+                        val isCurrentMonth = day in 1..daysInMonth
+                        val date = if (isCurrentMonth) displayedMonth.atDay(day) else null
+                        val isToday = date == today
+                        val hasPending = date != null && date in pendingDates
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .padding(2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isCurrentMonth) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .then(
+                                                if (isToday) Modifier.background(KippoColors.Teal, CircleShape)
+                                                else Modifier
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = day.toString(),
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isToday) Color.White else KippoColors.DarkText
+                                        )
+                                    }
+                                    if (hasPending) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(4.dp)
+                                                .background(
+                                                    if (date!! < today) Color(0xFFE53935) else KippoColors.Teal,
+                                                    CircleShape
+                                                )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
