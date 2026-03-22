@@ -39,6 +39,7 @@ fun HomeScreen(
     onLeaveHousehold: () -> Unit = {},
     onNavigateToTasks: () -> Unit = {},
     onNavigateToGastos: () -> Unit = {},
+    onNavigateToGroceries: () -> Unit = {},
     pendingTaskDates: Set<LocalDate> = emptySet(),
     onCreateTaskClick: () -> Unit = {},
     onNavigateToHouseholdProfile: () -> Unit = {},
@@ -100,7 +101,11 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (currentSection == BottomNavDestination.HOME) {
-                ActionButtonsRow(onTasksClick = onNavigateToTasks, onGastosClick = onNavigateToGastos)
+                ActionButtonsRow(
+                    onTasksClick = onNavigateToTasks, 
+                    onGastosClick = onNavigateToGastos,
+                    onGroceriesClick = onNavigateToGroceries
+                )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -133,7 +138,11 @@ fun HomeScreen(
 }
 
 @Composable
-fun ActionButtonsRow(onTasksClick: () -> Unit, onGastosClick: () -> Unit = {}) {
+fun ActionButtonsRow(
+    onTasksClick: () -> Unit, 
+    onGastosClick: () -> Unit = {},
+    onGroceriesClick: () -> Unit = {}
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -186,31 +195,59 @@ fun ActionButtonsRow(onTasksClick: () -> Unit, onGastosClick: () -> Unit = {}) {
             }
         }
 
-        Button(
-            onClick = { /* Navigate to Rewards */ },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(80.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Yellow),
-            shape = RoundedCornerShape(16.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+            Button(
+                onClick = onGroceriesClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(80.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Yellow),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.EmojiEvents,
-                    contentDescription = null,
-                    tint = KippoColors.DarkText,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "RECOMPENSAS",
-                    color = KippoColors.DarkText,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 12.sp
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingCart,
+                        contentDescription = null,
+                        tint = KippoColors.DarkText,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "COMPRA",
+                        color = KippoColors.DarkText,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            Button(
+                onClick = { /* Navigate to Rewards */ },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(80.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, KippoColors.Yellow)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = KippoColors.Yellow,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "RECOMPENSAS",
+                        color = KippoColors.DarkText,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
     }
@@ -221,7 +258,8 @@ fun ActionButtonsRow(onTasksClick: () -> Unit, onGastosClick: () -> Unit = {}) {
 fun CreatePickerSheet(
     onDismiss: () -> Unit,
     onSelectTask: () -> Unit,
-    onSelectExpense: () -> Unit
+    onSelectExpense: () -> Unit,
+    onSelectGrocery: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -335,6 +373,54 @@ fun CreatePickerSheet(
                         Icons.Default.ChevronRight,
                         contentDescription = null,
                         tint = KippoColors.DarkTeal
+                    )
+                }
+            }
+
+            Card(
+                onClick = { onSelectGrocery(); onDismiss() },
+                colors = CardDefaults.cardColors(containerColor = KippoColors.Yellow.copy(alpha = 0.08f)),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(KippoColors.Yellow, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            "Lista de compra",
+                            fontWeight = FontWeight.Bold,
+                            color = KippoColors.DarkText,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            "Crea una nueva lista de la compra",
+                            color = KippoColors.DarkText.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = KippoColors.Yellow
                     )
                 }
             }

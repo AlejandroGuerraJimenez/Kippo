@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import com.google.firebase.auth.FirebaseAuth
@@ -12,11 +13,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
 import java.time.ZoneId
 import es.ulpgc.kippo.ui.*
 import es.ulpgc.kippo.viewmodel.ExpenseViewModel
+import es.ulpgc.kippo.viewmodel.GroceryViewModel
 import es.ulpgc.kippo.viewmodel.HomeViewModel
 import es.ulpgc.kippo.viewmodel.TaskViewModel
 
@@ -34,6 +37,7 @@ class MainActivity : ComponentActivity() {
                     val screenState = remember { mutableStateOf(initial) }
                     var showCreateTaskDialog by remember { mutableStateOf(false) }
                     var showAddExpenseDialog by remember { mutableStateOf(false) }
+                    var showCreateGroceryDialog by remember { mutableStateOf(false) }
                     var showCreatePicker by remember { mutableStateOf(false) }
 
                     DisposableEffect(Unit) {
@@ -52,6 +56,8 @@ class MainActivity : ComponentActivity() {
                     val homeVm: HomeViewModel = viewModel(key = "home_vm_${auth.currentUser?.uid ?: "none"}")
                     val taskVm: TaskViewModel = viewModel()
                     val expenseVm: ExpenseViewModel = viewModel()
+                    val groceryVm: GroceryViewModel = viewModel()
+                    
                     val household by homeVm.household.collectAsState()
                     val allTasks by taskVm.tasks.collectAsState()
 
@@ -94,11 +100,23 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
+                    if (showCreateGroceryDialog && household != null) {
+                        CreateGroceryListDialog(
+                            onDismiss = { showCreateGroceryDialog = false },
+                            onCreate = { name, items ->
+                                groceryVm.createGroceryList(name, household!!.id, auth.currentUser?.uid ?: "", items)
+                                showCreateGroceryDialog = false
+                                screenState.value = "grocery_list"
+                            }
+                        )
+                    }
+
                     if (showCreatePicker) {
                         CreatePickerSheet(
                             onDismiss = { showCreatePicker = false },
                             onSelectTask = { showCreateTaskDialog = true },
-                            onSelectExpense = { showAddExpenseDialog = true }
+                            onSelectExpense = { showAddExpenseDialog = true },
+                            onSelectGrocery = { showCreateGroceryDialog = true }
                         )
                     }
 
@@ -121,6 +139,7 @@ class MainActivity : ComponentActivity() {
                             onJoinHouseholdRequested = { screenState.value = "join_household" },
                             onNavigateToTasks = { screenState.value = "tasks" },
                             onNavigateToGastos = { screenState.value = "gastos" },
+                            onNavigateToGroceries = { screenState.value = "grocery_list" },
                             onCreateTaskRequested = { showCreatePicker = true },
                             onNavigateToHouseholdProfile = { screenState.value = "household_profile" },
                             pendingTaskDates = pendingTaskDates
@@ -170,6 +189,17 @@ class MainActivity : ComponentActivity() {
                                 screenState.value = "home_dispatch"
                             }
                         }
+                        "grocery_list" -> {
+                            GroceryListScreen(
+                                householdId = household?.id ?: "",
+                                currentUserId = auth.currentUser?.uid ?: "",
+                                onNavigateHome = { screenState.value = "home_dispatch" },
+                                onNavigateToTasks = { screenState.value = "tasks" },
+                                onNavigateToGastos = { screenState.value = "gastos" },
+                                onAddGroceryClick = { showCreatePicker = true },
+                                viewModel = groceryVm
+                            )
+                        }
                     }
                 }
             }
@@ -185,6 +215,7 @@ fun HomeDispatch(
     onJoinHouseholdRequested: () -> Unit,
     onNavigateToTasks: () -> Unit,
     onNavigateToGastos: () -> Unit = {},
+    onNavigateToGroceries: () -> Unit = {},
     onCreateTaskRequested: () -> Unit,
     onNavigateToHouseholdProfile: () -> Unit,
     pendingTaskDates: Set<LocalDate> = emptySet()
@@ -209,6 +240,7 @@ fun HomeDispatch(
             onEditProfile = { name, username -> viewModel.updateProfile(name, username) },
             onNavigateToTasks = onNavigateToTasks,
             onNavigateToGastos = onNavigateToGastos,
+            onNavigateToGroceries = onNavigateToGroceries,
             onCreateTaskClick = onCreateTaskRequested,
             onNavigateToHouseholdProfile = onNavigateToHouseholdProfile,
             pendingTaskDates = pendingTaskDates,
