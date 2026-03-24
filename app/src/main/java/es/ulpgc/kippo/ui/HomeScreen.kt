@@ -43,6 +43,8 @@ fun HomeScreen(
     pendingTaskDates: Set<LocalDate> = emptySet(),
     onCreateTaskClick: () -> Unit = {},
     onNavigateToHouseholdProfile: () -> Unit = {},
+    // external state to control which bottom tab is selected (allows other screens to request Profile)
+    currentSectionState: MutableState<es.ulpgc.kippo.ui.components.BottomNavDestination>,
     profileName: String = "",
     profileUsername: String = "",
     profileEmail: String = "",
@@ -57,7 +59,6 @@ fun HomeScreen(
     val household by viewModel.household.collectAsState()
     
     var showEditProfileDialog by remember { mutableStateOf(false) }
-    var currentSection by remember { mutableStateOf(BottomNavDestination.HOME) }
 
     if (showEditProfileDialog) {
         EditProfileDialog(
@@ -81,14 +82,14 @@ fun HomeScreen(
                 onProfileClick = onNavigateToHouseholdProfile
             ) 
         },
-        bottomBar = {
+            bottomBar = {
             KippoBottomBar(
-                selectedDestination = currentSection,
-                onHomeClick = { currentSection = BottomNavDestination.HOME },
+                selectedDestination = currentSectionState.value,
+                onHomeClick = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.HOME },
                 onTasksClick = onNavigateToTasks,
                 onCreateClick = onCreateTaskClick,
                 onGastosClick = onNavigateToGastos,
-                onProfileClick = { currentSection = BottomNavDestination.PROFILE }
+                onProfileClick = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE }
             )
         },
         containerColor = KippoColors.Background
@@ -100,7 +101,7 @@ fun HomeScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (currentSection == BottomNavDestination.HOME) {
+            if (currentSectionState.value == es.ulpgc.kippo.ui.components.BottomNavDestination.HOME) {
                 ActionButtonsRow(
                     onTasksClick = onNavigateToTasks, 
                     onGastosClick = onNavigateToGastos,
@@ -110,7 +111,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 CalendarWidget(pendingDates = pendingTaskDates)
-            } else if (currentSection == BottomNavDestination.PROFILE) {
+            } else if (currentSectionState.value == es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE) {
                 ProfileSection(
                     name = profileName,
                     username = profileUsername,

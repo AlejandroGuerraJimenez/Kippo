@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,6 +41,7 @@ fun ExpenseScreen(
     currentUserId: String,
     onNavigateHome: () -> Unit,
     onNavigateToTasks: () -> Unit,
+    onNavigateToProfile: () -> Unit,
     onAddExpenseClick: () -> Unit,
     viewModel: ExpenseViewModel = viewModel()
 ) {
@@ -52,7 +54,7 @@ fun ExpenseScreen(
     var showSettleUpDialog by remember { mutableStateOf(false) }
     var settleUpFromUid by remember { mutableStateOf("") }
     var settleUpToUid by remember { mutableStateOf("") }
-    var settleUpAmount by remember { mutableStateOf(0.0) }
+    var settleUpAmount by remember { mutableDoubleStateOf(0.0) }
 
     LaunchedEffect(householdId) {
         viewModel.observeExpenses(householdId)
@@ -88,6 +90,11 @@ fun ExpenseScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onNavigateHome) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
                 title = { Text("Expenses", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = KippoColors.Background
@@ -101,7 +108,7 @@ fun ExpenseScreen(
                 onTasksClick = onNavigateToTasks,
                 onCreateClick = onAddExpenseClick,
                 onGastosClick = {},
-                onProfileClick = onNavigateHome
+                onProfileClick = onNavigateToProfile
             )
         },
         containerColor = KippoColors.Background
@@ -864,7 +871,7 @@ fun AddExpenseDialog(
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(ExpenseCategory.values()) { cat ->
+                        items(ExpenseCategory.entries.toTypedArray()) { cat ->
                             FilterChip(
                                 selected = selectedCategory == cat,
                                 onClick = { selectedCategory = cat },

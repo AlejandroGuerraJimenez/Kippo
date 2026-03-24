@@ -57,6 +57,8 @@ class MainActivity : ComponentActivity() {
                     val groceryVm: GroceryViewModel = viewModel()
                     
                     val household by homeVm.household.collectAsState()
+                    // Shared bottom navigation selection state used by HomeScreen and to request opening Profile
+                    val currentSectionState = remember { mutableStateOf(es.ulpgc.kippo.ui.components.BottomNavDestination.HOME) }
                     val allTasks by taskVm.tasks.collectAsState()
 
                     // Observe tasks as soon as household is available so CalendarWidget has data
@@ -137,7 +139,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToGroceries = { screenState.value = "grocery_list" },
                             onCreateTaskRequested = { showCreatePicker = true },
                             onNavigateToHouseholdProfile = { screenState.value = "household_profile" },
-                            pendingTaskDates = pendingTaskDates
+                            pendingTaskDates = pendingTaskDates,
+                            currentSectionState = currentSectionState
                         )
                         "create_household" -> CreateHouseholdScreen(
                             onHouseholdCreated = { screenState.value = "home_dispatch" }
@@ -152,21 +155,20 @@ class MainActivity : ComponentActivity() {
                                 members = members,
                                 onBack = { screenState.value = "home_dispatch" },
                                 onNavigateHome = { screenState.value = "home_dispatch" },
-                                onNavigateProfile = {
-                                    screenState.value = "home_dispatch"
-                                },
+                                onNavigateProfile = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE; screenState.value = "home_dispatch" },
                                 onNavigateToExpenses = { screenState.value = "gastos" },
                                 onCreateTaskClick = { showCreatePicker = true },
                                 viewModel = taskVm
                             )
                         }
                         "gastos" -> {
-                            ExpenseScreen(
+                                ExpenseScreen(
                                 householdId = household?.id ?: "",
                                 members = members,
                                 currentUserId = auth.currentUser?.uid ?: "",
                                 onNavigateHome = { screenState.value = "home_dispatch" },
                                 onNavigateToTasks = { screenState.value = "tasks" },
+                                onNavigateToProfile = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE; screenState.value = "home_dispatch" },
                                 onAddExpenseClick = { showCreatePicker = true },
                                 viewModel = expenseVm
                             )
@@ -191,6 +193,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateHome = { screenState.value = "home_dispatch" },
                                 onNavigateToTasks = { screenState.value = "tasks" },
                                 onNavigateToGastos = { screenState.value = "gastos" },
+                                onNavigateProfile = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE; screenState.value = "home_dispatch" },
                                 onAddGroceryClick = { showCreatePicker = true },
                                 viewModel = groceryVm
                             )
@@ -213,7 +216,8 @@ fun HomeDispatch(
     onNavigateToGroceries: () -> Unit = {},
     onCreateTaskRequested: () -> Unit,
     onNavigateToHouseholdProfile: () -> Unit,
-    pendingTaskDates: Set<LocalDate> = emptySet()
+    pendingTaskDates: Set<LocalDate> = emptySet(),
+    currentSectionState: MutableState<es.ulpgc.kippo.ui.components.BottomNavDestination>
 ) {
     val hasHousehold by viewModel.hasHousehold.collectAsState()
     val household by viewModel.household.collectAsState()
@@ -239,6 +243,7 @@ fun HomeDispatch(
             onCreateTaskClick = onCreateTaskRequested,
             onNavigateToHouseholdProfile = onNavigateToHouseholdProfile,
             pendingTaskDates = pendingTaskDates,
+            currentSectionState = currentSectionState,
             viewModel = viewModel
         )
         false -> SetupHouseholdScreen(

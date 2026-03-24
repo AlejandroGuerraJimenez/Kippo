@@ -34,6 +34,7 @@ fun GroceryListScreen(
     onNavigateHome: () -> Unit,
     onNavigateToTasks: () -> Unit,
     onNavigateToGastos: () -> Unit,
+    onNavigateProfile: () -> Unit,
     onAddGroceryClick: () -> Unit,
     viewModel: GroceryViewModel
 ) {
@@ -65,7 +66,7 @@ fun GroceryListScreen(
                 onTasksClick = onNavigateToTasks,
                 onCreateClick = onAddGroceryClick,
                 onGastosClick = onNavigateToGastos,
-                onProfileClick = { /* Navigate to profile */ }
+                onProfileClick = onNavigateProfile
             )
         },
         containerColor = KippoColors.Background
