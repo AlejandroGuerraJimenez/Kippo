@@ -66,7 +66,6 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Logo and App Name OUTSIDE the Card
         Spacer(modifier = Modifier.height(32.dp))
 
         Surface(
@@ -107,7 +106,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Iniciar sesión",
+                    text = "Log In",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = KippoColors.DarkText
@@ -118,7 +117,7 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = email,
                     onValueChange = { viewModel.onEmailChange(it) },
-                    label = { Text("Correo electrónico") },
+                    label = { Text("Email") },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isLoading,
                     shape = RoundedCornerShape(16.dp),
@@ -131,7 +130,7 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { viewModel.onPasswordChange(it) },
-                    label = { Text("Contraseña") },
+                    label = { Text("Password") },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = PasswordVisualTransformation(),
                     enabled = !isLoading,
@@ -170,7 +169,7 @@ fun LoginScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Iniciar sesión", fontWeight = FontWeight.Bold)
+                        Text("Log In", fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -180,7 +179,7 @@ fun LoginScreen(
                     onClick = onNavigateToRegister,
                     colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.Teal)
                 ) {
-                    Text("¿No tienes cuenta? Regístrate", fontWeight = FontWeight.SemiBold)
+                    Text("Don't have an account? Sign Up", fontWeight = FontWeight.SemiBold)
                 }
             }
         }

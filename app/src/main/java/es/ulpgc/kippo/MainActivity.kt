@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import com.google.firebase.auth.FirebaseAuth
@@ -13,7 +12,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
 import java.time.ZoneId
@@ -75,9 +73,6 @@ class MainActivity : ComponentActivity() {
                             .toSet()
                     }
                     val members by homeVm.members.collectAsState()
-                    val currentUserProfile by homeVm.currentUserProfile.collectAsState()
-                    val profileUpdateInProgress by homeVm.profileUpdateInProgress.collectAsState()
-                    val errorMessage by homeVm.errorMessage.collectAsState()
 
                     if (showCreateTaskDialog && household != null) {
                         CreateTaskDialog(
@@ -160,13 +155,13 @@ class MainActivity : ComponentActivity() {
                                 onNavigateProfile = {
                                     screenState.value = "home_dispatch"
                                 },
-                                onNavigateToGastos = { screenState.value = "gastos" },
+                                onNavigateToExpenses = { screenState.value = "gastos" },
                                 onCreateTaskClick = { showCreatePicker = true },
                                 viewModel = taskVm
                             )
                         }
                         "gastos" -> {
-                            GastosScreen(
+                            ExpenseScreen(
                                 householdId = household?.id ?: "",
                                 members = members,
                                 currentUserId = auth.currentUser?.uid ?: "",

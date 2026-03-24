@@ -57,7 +57,6 @@ fun RegisterScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Logo and App Name OUTSIDE the Card
         Spacer(modifier = Modifier.height(32.dp))
 
         Surface(
@@ -98,7 +97,7 @@ fun RegisterScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Registro",
+                    text = "Sign Up",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = KippoColors.DarkText
@@ -109,7 +108,7 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = username,
                     onValueChange = { viewModel.onUsernameChange(it) },
-                    label = { Text("Nombre de usuario") },
+                    label = { Text("Username") },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isLoading,
                     isError = fieldErrors["username"] != null,
@@ -131,7 +130,7 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { viewModel.onNameChange(it) },
-                    label = { Text("Nombre") },
+                    label = { Text("Full Name") },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isLoading,
                     isError = fieldErrors["name"] != null,
@@ -153,7 +152,7 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = email,
                     onValueChange = { viewModel.onEmailChange(it) },
-                    label = { Text("Correo electrónico") },
+                    label = { Text("Email") },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isLoading,
                     isError = fieldErrors["email"] != null,
@@ -175,7 +174,7 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { viewModel.onPasswordChange(it) },
-                    label = { Text("Contraseña") },
+                    label = { Text("Password") },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = PasswordVisualTransformation(),
                     enabled = !isLoading,
@@ -203,7 +202,7 @@ fun RegisterScreen(
 
                 if (isSuccess) {
                     Text(
-                        text = "¡Registro completado con éxito!",
+                        text = "Registration successful!",
                         color = KippoColors.Teal,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 8.dp)
@@ -232,7 +231,7 @@ fun RegisterScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Registrarse", fontWeight = FontWeight.Bold)
+                        Text("Sign Up", fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -242,7 +241,7 @@ fun RegisterScreen(
                     onClick = onNavigateToLogin,
                     colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.Teal)
                 ) {
-                    Text("¿Ya tienes cuenta? Inicia sesión", fontWeight = FontWeight.SemiBold)
+                    Text("Already have an account? Log In", fontWeight = FontWeight.SemiBold)
                 }
             }
         }

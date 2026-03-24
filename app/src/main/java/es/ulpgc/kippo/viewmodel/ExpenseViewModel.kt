@@ -75,7 +75,7 @@ class ExpenseViewModel(
         )
         viewModelScope.launch {
             expenseRepository.addExpense(expense).onFailure {
-                _errorMessage.value = "Error al añadir el gasto"
+                _errorMessage.value = "Error adding expense"
             }
         }
     }
@@ -84,7 +84,7 @@ class ExpenseViewModel(
         if (currentHouseholdId.isBlank()) return
         viewModelScope.launch {
             expenseRepository.deleteExpense(currentHouseholdId, expenseId).onFailure {
-                _errorMessage.value = "Error al eliminar el gasto"
+                _errorMessage.value = "Error deleting expense"
             }
         }
     }
@@ -100,7 +100,7 @@ class ExpenseViewModel(
         )
         viewModelScope.launch {
             expenseRepository.addSettlement(settlement).onFailure {
-                _errorMessage.value = "Error al registrar el pago"
+                _errorMessage.value = "Error recording payment"
             }
         }
     }

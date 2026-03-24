@@ -34,7 +34,7 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GastosScreen(
+fun ExpenseScreen(
     householdId: String,
     members: List<User>,
     currentUserId: String,
@@ -88,7 +88,7 @@ fun GastosScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Gastos", fontWeight = FontWeight.Bold) },
+                title = { Text("Expenses", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = KippoColors.Background
                 )
@@ -121,7 +121,7 @@ fun GastosScreen(
                     onClick = { selectedTab = 0 },
                     text = {
                         Text(
-                            "Historial",
+                            "History",
                             fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 0) KippoColors.Teal else KippoColors.DarkText.copy(alpha = 0.5f)
                         )
@@ -132,7 +132,7 @@ fun GastosScreen(
                     onClick = { selectedTab = 1 },
                     text = {
                         Text(
-                            "Saldos",
+                            "Balances",
                             fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 1) KippoColors.Teal else KippoColors.DarkText.copy(alpha = 0.5f)
                         )
@@ -155,12 +155,12 @@ fun GastosScreen(
                             )
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                "Sin gastos aún",
+                                "No expenses yet",
                                 color = KippoColors.DarkText.copy(alpha = 0.4f),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Text(
-                                "Pulsa + para añadir uno",
+                                "Tap + to add one",
                                 color = KippoColors.DarkText.copy(alpha = 0.3f),
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -261,7 +261,7 @@ fun ExpenseItem(
                     color = KippoColors.DarkText
                 )
                 Text(
-                    text = "Pagado por: ${paidByUser?.username ?: "Desconocido"}",
+                    text = "Paid by: ${paidByUser?.username ?: "Unknown"}",
                     style = MaterialTheme.typography.labelSmall,
                     color = KippoColors.DarkText.copy(alpha = 0.6f)
                 )
@@ -282,7 +282,7 @@ fun ExpenseItem(
                     color = amountColor
                 )
                 Text(
-                    text = "${expense.splitAmong.size} personas",
+                    text = "${expense.splitAmong.size} people",
                     style = MaterialTheme.typography.labelSmall,
                     color = KippoColors.DarkText.copy(alpha = 0.4f)
                 )
@@ -310,7 +310,7 @@ fun BalanceSummaryContent(
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Todo está saldado",
+                    "Everything is settled",
                     color = KippoColors.DarkText.copy(alpha = 0.4f),
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -328,7 +328,7 @@ fun BalanceSummaryContent(
     ) {
         item {
             Text(
-                "Resumen de saldos",
+                "Balance summary",
                 fontWeight = FontWeight.Bold,
                 color = KippoColors.DarkText,
                 style = MaterialTheme.typography.titleMedium,
@@ -345,7 +345,7 @@ fun BalanceSummaryContent(
             item {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Para saldar cuentas",
+                    "To settle up",
                     fontWeight = FontWeight.Bold,
                     color = KippoColors.DarkText,
                     style = MaterialTheme.typography.titleMedium,
@@ -478,7 +478,7 @@ fun DebtRow(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 modifier = Modifier.height(32.dp)
             ) {
-                Text("SALDAR", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("SETTLE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -519,7 +519,7 @@ fun ExpenseDetailDialog(
                 Text(expense.title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 if (canDelete) {
                     IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red)
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
                     }
                 }
             }
@@ -527,11 +527,11 @@ fun ExpenseDetailDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 HorizontalDivider()
-                ExpenseDetailRow("Importe:", "%.2f €".format(expense.amount))
-                ExpenseDetailRow("Categoría:", category.label)
-                ExpenseDetailRow("Pagado por:", paidByUser?.username ?: "Desconocido")
+                ExpenseDetailRow("Amount:", "%.2f €".format(expense.amount))
+                ExpenseDetailRow("Category:", category.label)
+                ExpenseDetailRow("Paid by:", paidByUser?.username ?: "Unknown")
                 ExpenseDetailRow(
-                    "Dividido entre:",
+                    "Split between:",
                     if (splitUsers.isEmpty()) "—" else splitUsers.joinToString(", ")
                 )
                 if (expense.customSplits.isNotEmpty()) {
@@ -541,22 +541,22 @@ fun ExpenseDetailDialog(
                     }
                 } else {
                     ExpenseDetailRow(
-                        "Por persona:",
+                        "Per person:",
                         if (expense.splitAmong.isNotEmpty())
                             "%.2f €".format(expense.amount / expense.splitAmong.size)
                         else "—"
                     )
                 }
                 if (expense.notes.isNotBlank()) {
-                    ExpenseDetailRow("Notas:", expense.notes)
+                    ExpenseDetailRow("Notes:", expense.notes)
                 }
                 expense.createdAt?.let {
-                    ExpenseDetailRow("Fecha:", dateFormat.format(it))
+                    ExpenseDetailRow("Date:", dateFormat.format(it))
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("CERRAR", color = KippoColors.Teal) }
+            TextButton(onClick = onDismiss) { Text("CLOSE", color = KippoColors.Teal) }
         },
         containerColor = Color.White,
         shape = RoundedCornerShape(24.dp)
@@ -628,7 +628,7 @@ fun AddExpenseDialog(
             .fillMaxWidth(0.92f)
             .padding(vertical = 24.dp),
         title = {
-            Text("Añadir gasto", fontWeight = FontWeight.Bold, color = KippoColors.DarkText)
+            Text("Add expense", fontWeight = FontWeight.Bold, color = KippoColors.DarkText)
         },
         text = {
             Column(
@@ -638,10 +638,10 @@ fun AddExpenseDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it; titleError = false },
-                    label = { Text("Título") },
-                    placeholder = { Text("Ej: Cena del viernes") },
+                    label = { Text("Title") },
+                    placeholder = { Text("E.g.: Friday dinner") },
                     isError = titleError,
-                    supportingText = if (titleError) { { Text("El título es obligatorio") } } else null,
+                    supportingText = if (titleError) { { Text("Title is required") } } else null,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = fieldColors
@@ -650,9 +650,9 @@ fun AddExpenseDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it; amountError = false },
-                    label = { Text("Importe (€)") },
+                    label = { Text("Amount (€)") },
                     isError = amountError,
-                    supportingText = if (amountError) { { Text("Introduce un importe válido") } } else null,
+                    supportingText = if (amountError) { { Text("Enter a valid amount") } } else null,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = fieldColors,
@@ -661,10 +661,10 @@ fun AddExpenseDialog(
                     )
                 )
 
-                // Pagado por
+                // Paid by
                 Column {
                     Text(
-                        "Pagado por",
+                        "Paid by",
                         style = MaterialTheme.typography.labelMedium,
                         color = KippoColors.DarkText.copy(alpha = 0.7f),
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
@@ -677,7 +677,7 @@ fun AddExpenseDialog(
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = KippoColors.DarkText),
                             border = androidx.compose.foundation.BorderStroke(1.dp, KippoColors.DarkTeal.copy(alpha = 0.3f))
                         ) {
-                            val paidByName = members.find { it.uid == paidBy }?.username ?: "Yo"
+                            val paidByName = members.find { it.uid == paidBy }?.username ?: "Me"
                             Text(paidByName, color = KippoColors.Teal, modifier = Modifier.weight(1f))
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                         }
@@ -705,7 +705,7 @@ fun AddExpenseDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Dividir",
+                            "Split",
                             style = MaterialTheme.typography.labelMedium,
                             color = KippoColors.DarkText.copy(alpha = 0.7f)
                         )
@@ -713,7 +713,7 @@ fun AddExpenseDialog(
                         FilterChip(
                             selected = splitMode == SplitMode.EQUAL,
                             onClick = { splitMode = SplitMode.EQUAL; customSplitError = false },
-                            label = { Text("A partes iguales", fontSize = 11.sp) },
+                            label = { Text("Equal split", fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = KippoColors.Teal,
                                 selectedLabelColor = Color.White
@@ -722,7 +722,7 @@ fun AddExpenseDialog(
                         FilterChip(
                             selected = splitMode == SplitMode.CUSTOM,
                             onClick = { splitMode = SplitMode.CUSTOM; customSplitError = false },
-                            label = { Text("Por importes", fontSize = 11.sp) },
+                            label = { Text("By amounts", fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = KippoColors.Teal,
                                 selectedLabelColor = Color.White
@@ -833,7 +833,7 @@ fun AddExpenseDialog(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                "Total asignado:",
+                                "Total assigned:",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = KippoColors.DarkText.copy(alpha = 0.6f)
                             )
@@ -847,7 +847,7 @@ fun AddExpenseDialog(
 
                         if (customSplitError) {
                             Text(
-                                "La suma debe ser igual al importe total (%.2f €)".format(totalAmount),
+                                "Total must equal the expense amount (%.2f €)".format(totalAmount),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFE53935)
                             )
@@ -858,7 +858,7 @@ fun AddExpenseDialog(
                 // Categoría
                 Column {
                     Text(
-                        "Categoría",
+                        "Category",
                         style = MaterialTheme.typography.labelMedium,
                         color = KippoColors.DarkText.copy(alpha = 0.7f),
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
@@ -889,7 +889,7 @@ fun AddExpenseDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Notas (opcional)") },
+                    label = { Text("Notes (optional)") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                     shape = RoundedCornerShape(12.dp),
@@ -928,7 +928,7 @@ fun AddExpenseDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("AÑADIR GASTO", fontWeight = FontWeight.Bold)
+                Text("ADD EXPENSE", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -937,7 +937,7 @@ fun AddExpenseDialog(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.DarkTeal)
             ) {
-                Text("CANCELAR")
+                Text("CANCEL")
             }
         },
         containerColor = Color.White,
@@ -974,7 +974,7 @@ fun SettleUpDialog(
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier.fillMaxWidth(0.92f),
         title = {
-            Text("Registrar pago", fontWeight = FontWeight.Bold, color = KippoColors.DarkText)
+            Text("Record payment", fontWeight = FontWeight.Bold, color = KippoColors.DarkText)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1014,9 +1014,9 @@ fun SettleUpDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it; amountError = false },
-                    label = { Text("Importe (€)") },
+                    label = { Text("Amount (€)") },
                     isError = amountError,
-                    supportingText = if (amountError) { { Text("Introduce un importe válido") } } else null,
+                    supportingText = if (amountError) { { Text("Enter a valid amount") } } else null,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = fieldColors,
@@ -1028,7 +1028,7 @@ fun SettleUpDialog(
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
-                    label = { Text("Nota (opcional)") },
+                    label = { Text("Note (optional)") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = fieldColors
@@ -1050,7 +1050,7 @@ fun SettleUpDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("CONFIRMAR PAGO", fontWeight = FontWeight.Bold)
+                Text("CONFIRM PAYMENT", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -1059,7 +1059,7 @@ fun SettleUpDialog(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.DarkTeal)
             ) {
-                Text("CANCELAR")
+                Text("CANCEL")
             }
         },
         containerColor = Color.White,

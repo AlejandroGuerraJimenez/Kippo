@@ -5,19 +5,10 @@ import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
-
-/**
- * Repositorio para operaciones de autenticación en Firebase.
- * Ahora también crea el documento del usuario en Firestore en la colección `users`.
- */
 class AuthRepository {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
-    /**
-     * Registra en Firebase Authentication y crea el documento en Firestore /users/{uid}.
-     * name y username son opcionales y se incluyen en el documento.
-     */
     fun register(
         email: String,
         password: String,
@@ -30,11 +21,10 @@ class AuthRepository {
                 if (task.isSuccessful) {
                     val uid = auth.currentUser?.uid
                     if (uid == null) {
-                        onComplete(false, "No se obtuvo el uid del usuario")
+                        onComplete(false, "Could not get user UID")
                         return@addOnCompleteListener
                     }
 
-                    // Construir el mapa de datos para Firestore
                     val userMap = hashMapOf<String, Any>(
                         "uid" to uid,
                         "created_at" to FieldValue.serverTimestamp(),
@@ -52,20 +42,20 @@ class AuthRepository {
                             onComplete(true, null)
                         }
                         .addOnFailureListener { ex ->
-                            val msg = ex.localizedMessage ?: "Error al guardar usuario en Firestore"
+                            val msg = ex.localizedMessage ?: "Error saving user to Firestore"
                             onComplete(false, msg)
                         }
                 } else {
                     val ex = task.exception
                     val message = when (ex) {
                         is FirebaseAuthException -> mapErrorCode(ex.errorCode)
-                        else -> ex?.localizedMessage ?: "Error desconocido durante el registro"
+                        else -> ex?.localizedMessage ?: "Unknown error during registration"
                     }
                     onComplete(false, message)
                 }
             }
             .addOnFailureListener { ex ->
-                val msg = ex.localizedMessage ?: "Error desconocido en register"
+                val msg = ex.localizedMessage ?: "Unknown error in register"
                 onComplete(false, msg)
             }
     }
@@ -79,7 +69,7 @@ class AuthRepository {
                     val ex = task.exception
                     val message = when (ex) {
                         is FirebaseAuthException -> mapErrorCode(ex.errorCode)
-                        else -> ex?.localizedMessage ?: "Error desconocido durante el inicio de sesión"
+                        else -> ex?.localizedMessage ?: "Unknown error during login"
                     }
                     onComplete(false, message)
                 }
@@ -90,13 +80,12 @@ class AuthRepository {
 
     private fun mapErrorCode(code: String): String {
         return when (code) {
-            "ERROR_EMAIL_ALREADY_IN_USE" -> "El correo ya está en uso"
-            "ERROR_INVALID_EMAIL" -> "El correo electrónico no tiene un formato válido"
-            "ERROR_WEAK_PASSWORD" -> "La contraseña es demasiado débil (mínimo 6 caracteres)"
-            "ERROR_USER_NOT_FOUND" -> "Usuario no encontrado"
-            "ERROR_WRONG_PASSWORD" -> "Contraseña incorrecta"
-            else -> "Error de autenticación: $code"
+            "ERROR_EMAIL_ALREADY_IN_USE" -> "Email already in use"
+            "ERROR_INVALID_EMAIL" -> "Invalid email format"
+            "ERROR_WEAK_PASSWORD" -> "Password too weak (minimum 6 characters)"
+            "ERROR_USER_NOT_FOUND" -> "User not found"
+            "ERROR_WRONG_PASSWORD" -> "Incorrect password"
+            else -> "Authentication error: $code"
         }
     }
 }
-

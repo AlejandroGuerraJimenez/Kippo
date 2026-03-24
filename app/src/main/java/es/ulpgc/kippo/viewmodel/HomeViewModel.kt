@@ -103,7 +103,7 @@ class HomeViewModel(
             result.onSuccess {
                 refreshHouseholdData()
             }.onFailure { ex ->
-                _errorMessage.value = ex.message ?: "No se pudo actualizar el nombre"
+                _errorMessage.value = ex.message ?: "Could not update name"
             }
         }
     }
@@ -115,7 +115,7 @@ class HomeViewModel(
             result.onSuccess {
                 refreshHouseholdData()
             }.onFailure { ex ->
-                _errorMessage.value = ex.message ?: "No se pudo eliminar al miembro"
+                _errorMessage.value = ex.message ?: "Could not remove member"
             }
         }
     }
@@ -129,7 +129,7 @@ class HomeViewModel(
                 _leaveInProgress.value = true
                 val result = householdRepository.leaveHousehold(userId, householdId)
                 result.onFailure { ex ->
-                    _errorMessage.value = ex.message ?: "No se pudo abandonar el household"
+                    _errorMessage.value = ex.message ?: "Could not leave household"
                 }
                 _leaveInProgress.value = false
             }
@@ -146,12 +146,12 @@ class HomeViewModel(
         val cleanUsername = username.trim()
 
         if (cleanName.isBlank()) {
-            _errorMessage.value = "El nombre no puede estar vacío"
+            _errorMessage.value = "Name cannot be empty"
             return
         }
 
         if (cleanUsername.isBlank()) {
-            _errorMessage.value = "El nombre de usuario no puede estar vacío"
+            _errorMessage.value = "Username cannot be empty"
             return
         }
 
@@ -168,7 +168,7 @@ class HomeViewModel(
             )
 
             result.onFailure { ex ->
-                _errorMessage.value = ex.message ?: "No se pudo actualizar el perfil"
+                _errorMessage.value = ex.message ?: "Could not update profile"
             }
             _profileUpdateInProgress.value = false
         }

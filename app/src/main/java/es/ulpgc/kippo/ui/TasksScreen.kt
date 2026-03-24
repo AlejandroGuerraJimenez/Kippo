@@ -39,11 +39,11 @@ import java.util.*
 
 private data class RecurrenceOption(val key: String, val label: String, val shortLabel: String)
 private val recurrenceOptions = listOf(
-    RecurrenceOption("none",      "Sin repetición", ""),
-    RecurrenceOption("daily",     "Diaria",         "Diaria"),
-    RecurrenceOption("weekly",    "Semanal",        "Semanal"),
-    RecurrenceOption("biweekly",  "Quincenal",      "Quincenal"),
-    RecurrenceOption("monthly",   "Mensual",        "Mensual")
+    RecurrenceOption("none",      "No repeat", ""),
+    RecurrenceOption("daily",     "Daily",     "Daily"),
+    RecurrenceOption("weekly",    "Weekly",    "Weekly"),
+    RecurrenceOption("biweekly",  "Biweekly",  "Biweekly"),
+    RecurrenceOption("monthly",   "Monthly",   "Monthly")
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +54,7 @@ fun TasksScreen(
     onBack: () -> Unit,
     onNavigateHome: () -> Unit,
     onNavigateProfile: () -> Unit,
-    onNavigateToGastos: () -> Unit = {},
+    onNavigateToExpenses: () -> Unit = {},
     onCreateTaskClick: () -> Unit,
     viewModel: TaskViewModel = viewModel()
 ) {
@@ -114,7 +114,7 @@ fun TasksScreen(
                 onHomeClick = onNavigateHome,
                 onTasksClick = {},
                 onCreateClick = onCreateTaskClick,
-                onGastosClick = onNavigateToGastos,
+                onGastosClick = onNavigateToExpenses,
                 onProfileClick = onNavigateProfile
             )
         },
@@ -135,7 +135,7 @@ fun TasksScreen(
                     onClick = { selectedTab = 0 },
                     text = {
                         Text(
-                            "Todas",
+                            "All",
                             fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 0) KippoColors.Teal else KippoColors.DarkText.copy(alpha = 0.5f)
                         )
@@ -146,7 +146,7 @@ fun TasksScreen(
                     onClick = { selectedTab = 1 },
                     text = {
                         Text(
-                            "Esta semana",
+                            "This Week",
                             fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 1) KippoColors.Teal else KippoColors.DarkText.copy(alpha = 0.5f)
                         )
@@ -157,7 +157,7 @@ fun TasksScreen(
             if (selectedTab == 0) {
                 if (tasks.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Sin tareas. ¡Crea una!", color = KippoColors.DarkText.copy(alpha = 0.5f))
+                        Text("No tasks yet. Create one!", color = KippoColors.DarkText.copy(alpha = 0.5f))
                     }
                 } else {
                     LazyColumn(
@@ -191,7 +191,7 @@ fun TasksScreen(
 
 @Composable
 fun TaskItem(task: Task, members: List<User>, onToggle: () -> Unit, onClick: () -> Unit) {
-    val dateFormat = remember { SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("dd MMM, HH:mm", Locale.ENGLISH) }
     val assignedUser = members.find { it.uid == task.assignedTo }
     
     Card(
@@ -231,14 +231,14 @@ fun TaskItem(task: Task, members: List<User>, onToggle: () -> Unit, onClick: () 
                 if (task.dueDate != null && !task.completed) {
                     val isOverdue = task.dueDate.before(Date())
                     Text(
-                        text = "Vence: ${dateFormat.format(task.dueDate)}",
+                        text = "Due: ${dateFormat.format(task.dueDate)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isOverdue) Color(0xFFE53935) else KippoColors.DarkText.copy(alpha = 0.5f),
                         fontWeight = FontWeight.Medium
                     )
                 } else if (task.completed && task.completedAt != null) {
                     Text(
-                        text = "Completada: ${dateFormat.format(task.completedAt)}",
+                        text = "Completed: ${dateFormat.format(task.completedAt)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = KippoColors.Teal,
                         fontWeight = FontWeight.Medium
@@ -330,8 +330,7 @@ fun WeeklyTaskView(
         tasks.filter { it.recurrence != "none" && it.dueDate == null && !it.completed }
     }
 
-    val monthYearFormat = remember { SimpleDateFormat("MMM yyyy", Locale("es")) }
-    val dayMonthFormat = remember { SimpleDateFormat("dd MMM", Locale("es")) }
+    val dayMonthFormat = remember { SimpleDateFormat("dd MMM", Locale.ENGLISH) }
 
     LazyColumn(
         modifier = Modifier
@@ -340,7 +339,6 @@ fun WeeklyTaskView(
         contentPadding = PaddingValues(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Week navigation header
         item {
             Row(
                 modifier = Modifier
@@ -352,8 +350,8 @@ fun WeeklyTaskView(
                     Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = KippoColors.Teal)
                 }
                 Text(
-                    text = if (weekOffset == 0) "Esta semana"
-                           else "Semana del ${dayMonthFormat.format(Date.from(monday.atStartOfDay(ZoneId.systemDefault()).toInstant()))}",
+                    text = if (weekOffset == 0) "This Week"
+                           else "Week of ${dayMonthFormat.format(Date.from(monday.atStartOfDay(ZoneId.systemDefault()).toInstant()))}",
                     modifier = Modifier.weight(1f),
                     fontWeight = FontWeight.Bold,
                     color = KippoColors.DarkText,
@@ -366,11 +364,10 @@ fun WeeklyTaskView(
             }
         }
 
-        // Day sections
         weekDays.forEach { day ->
             val dayTasks = tasksByDay[day] ?: emptyList()
             val isToday = day == today
-            val dayName = day.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es"))
+            val dayName = day.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
                 .replaceFirstChar { it.uppercase() }
 
             item(key = day.toString()) {
@@ -431,7 +428,7 @@ fun WeeklyTaskView(
             if (dayTasks.isEmpty()) {
                 item(key = "${day}_empty") {
                     Text(
-                        "Sin tareas",
+                        "No tasks",
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 46.dp, bottom = 4.dp),
@@ -453,7 +450,6 @@ fun WeeklyTaskView(
             }
         }
 
-        // Recurring tasks without due date
         if (recurringNoDueDate.isNotEmpty()) {
             item {
                 Row(
@@ -465,7 +461,7 @@ fun WeeklyTaskView(
                 ) {
                     Icon(Icons.Default.Repeat, contentDescription = null, tint = KippoColors.Teal, modifier = Modifier.size(18.dp))
                     Text(
-                        "Recurrentes sin fecha",
+                        "Recurring without date",
                         fontWeight = FontWeight.Bold,
                         color = KippoColors.DarkText,
                         style = MaterialTheme.typography.bodyMedium
@@ -486,7 +482,7 @@ fun WeeklyTaskView(
 
 @Composable
 fun TaskDetailDialog(task: Task, members: List<User>, onDismiss: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.ENGLISH) }
     val assignedUser = members.find { it.uid == task.assignedTo }
     val completedByUser = members.find { it.uid == task.completedBy }
 
@@ -515,7 +511,7 @@ fun TaskDetailDialog(task: Task, members: List<User>, onDismiss: () -> Unit, onE
                 DetailRow(label = "Assigned to:", value = assignedUser?.username ?: "Anyone")
                 DetailRow(
                     label = "Recurrence:",
-                    value = recurrenceOptions.find { it.key == task.recurrence }?.label ?: "Sin repetición"
+                    value = recurrenceOptions.find { it.key == task.recurrence }?.label ?: "No repeat"
                 )
                 DetailRow(label = "Created on:", value = task.createdAt?.let { dateFormat.format(it) } ?: "N/A")
                 
@@ -556,7 +552,7 @@ fun CreateTaskDialog(
     var dueDateMillis by remember { mutableStateOf<Long?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
-    val dateDisplayFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale("es")) }
+    val dateDisplayFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH) }
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
@@ -568,11 +564,11 @@ fun CreateTaskDialog(
                 TextButton(onClick = {
                     dueDateMillis = datePickerState.selectedDateMillis
                     showDatePicker = false
-                }) { Text("Aceptar", color = KippoColors.Teal) }
+                }) { Text("OK", color = KippoColors.Teal) }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancelar", color = KippoColors.DarkTeal)
+                    Text("Cancel", color = KippoColors.DarkTeal)
                 }
             }
         ) { DatePicker(state = datePickerState) }
@@ -609,7 +605,7 @@ fun CreateTaskDialog(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text("Task Title") },
-                    placeholder = { Text("Ej: Sacar la basura") },
+                    placeholder = { Text("Ex: Take out the trash") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = fieldColors
@@ -671,10 +667,9 @@ fun CreateTaskDialog(
                     }
                 }
 
-                // Fecha de vencimiento
                 Column {
                     Text(
-                        text = "Fecha de vencimiento",
+                        text = "Due date",
                         style = MaterialTheme.typography.labelMedium,
                         color = KippoColors.DarkText.copy(alpha = 0.7f),
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
@@ -689,7 +684,7 @@ fun CreateTaskDialog(
                         Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = KippoColors.Teal, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = dueDateMillis?.let { dateDisplayFormat.format(Date(it)) } ?: "Sin fecha",
+                            text = dueDateMillis?.let { dateDisplayFormat.format(Date(it)) } ?: "No date",
                             modifier = Modifier.weight(1f),
                             color = if (dueDateMillis != null) KippoColors.Teal else KippoColors.DarkText.copy(alpha = 0.5f)
                         )
@@ -703,7 +698,7 @@ fun CreateTaskDialog(
 
                 Column {
                     Text(
-                        text = "Repetición",
+                        text = "Repeat",
                         style = MaterialTheme.typography.labelMedium,
                         color = KippoColors.DarkText.copy(alpha = 0.7f),
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
@@ -780,7 +775,7 @@ fun EditTaskDialog(
     var dueDateMillis by remember { mutableStateOf<Long?>(task.dueDate?.time) }
     var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
-    val dateDisplayFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale("es")) }
+    val dateDisplayFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH) }
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
@@ -792,11 +787,11 @@ fun EditTaskDialog(
                 TextButton(onClick = {
                     dueDateMillis = datePickerState.selectedDateMillis
                     showDatePicker = false
-                }) { Text("Aceptar", color = KippoColors.Teal) }
+                }) { Text("OK", color = KippoColors.Teal) }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancelar", color = KippoColors.DarkTeal)
+                    Text("Cancel", color = KippoColors.DarkTeal)
                 }
             }
         ) { DatePicker(state = datePickerState) }
@@ -865,7 +860,7 @@ fun EditTaskDialog(
 
                 Column {
                     Text(
-                        "Fecha de vencimiento",
+                        "Due date",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.Gray,
                         modifier = Modifier.padding(bottom = 4.dp)
@@ -878,7 +873,7 @@ fun EditTaskDialog(
                         Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = KippoColors.Teal, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = dueDateMillis?.let { dateDisplayFormat.format(Date(it)) } ?: "Sin fecha",
+                            text = dueDateMillis?.let { dateDisplayFormat.format(Date(it)) } ?: "No date",
                             modifier = Modifier.weight(1f),
                             color = if (dueDateMillis != null) KippoColors.Teal else Color.Gray
                         )
@@ -892,7 +887,7 @@ fun EditTaskDialog(
 
                 Column {
                     Text(
-                        "Repetición",
+                        "Repeat",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.Gray,
                         modifier = Modifier.padding(bottom = 4.dp)

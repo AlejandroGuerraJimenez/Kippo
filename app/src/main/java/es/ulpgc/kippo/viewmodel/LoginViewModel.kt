@@ -39,11 +39,11 @@ class LoginViewModel(private val repository: AuthRepository = AuthRepository()) 
         val emailValue = _email.value.trim()
         val passwordValue = _password.value
 
-        if (emailValue.isEmpty()) errors["email"] = "El correo es obligatorio"
-        else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(emailValue).matches()) errors["email"] = "Correo no válido"
+        if (emailValue.isEmpty()) errors["email"] = "Email is required"
+        else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(emailValue).matches()) errors["email"] = "Invalid email"
 
-        if (passwordValue.isEmpty()) errors["password"] = "La contraseña es obligatoria"
-        else if (passwordValue.length < 6) errors["password"] = "La contraseña debe tener al menos 6 caracteres"
+        if (passwordValue.isEmpty()) errors["password"] = "Password is required"
+        else if (passwordValue.length < 6) errors["password"] = "Password must be at least 6 characters"
 
         _error.value = null
         return errors.isEmpty()
@@ -62,9 +62,8 @@ class LoginViewModel(private val repository: AuthRepository = AuthRepository()) 
                 _isSuccess.value = true
             } else {
                 _isSuccess.value = false
-                _error.value = errorMessage ?: "Error al iniciar sesión"
+                _error.value = errorMessage ?: "Login error"
             }
         }
     }
 }
-

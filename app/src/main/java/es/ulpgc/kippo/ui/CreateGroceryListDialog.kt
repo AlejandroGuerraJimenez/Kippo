@@ -48,7 +48,7 @@ fun CreateGroceryListDialog(
             .padding(vertical = 24.dp),
         title = {
             Text(
-                "Nueva Lista de Compra",
+                "New Grocery List",
                 fontWeight = FontWeight.Bold,
                 color = KippoColors.DarkText
             )
@@ -63,15 +63,15 @@ fun CreateGroceryListDialog(
                 OutlinedTextField(
                     value = listName,
                     onValueChange = { listName = it },
-                    label = { Text("Nombre de la lista") },
-                    placeholder = { Text("Ej: Mercadona") },
+                    label = { Text("List name") },
+                    placeholder = { Text("E.g.: Supermarket") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = fieldColors
                 )
 
                 Text(
-                    "Artículos",
+                    "Items",
                     fontWeight = FontWeight.Bold,
                     color = KippoColors.DarkText,
                     fontSize = 14.sp
@@ -85,7 +85,7 @@ fun CreateGroceryListDialog(
                     OutlinedTextField(
                         value = itemText,
                         onValueChange = { itemText = it },
-                        placeholder = { Text("Ej. Leche") },
+                        placeholder = { Text("E.g. Milk") },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         colors = fieldColors
@@ -101,7 +101,7 @@ fun CreateGroceryListDialog(
                             .background(KippoColors.Teal, RoundedCornerShape(12.dp))
                             .size(48.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Añadir", tint = Color.White)
+                        Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
                     }
                 }
 
@@ -130,7 +130,7 @@ fun CreateGroceryListDialog(
                                     onClick = { items.removeAt(index) },
                                     modifier = Modifier.size(24.dp)
                                 ) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red.copy(alpha = 0.4f))
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.4f))
                                 }
                             }
                         }
@@ -149,12 +149,12 @@ fun CreateGroceryListDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Crear", fontWeight = FontWeight.Bold)
+                Text("Create", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = KippoColors.DarkTeal)
+                Text("Cancel", color = KippoColors.DarkTeal)
             }
         }
     )

@@ -164,7 +164,7 @@ fun ActionButtonsRow(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "TAREAS",
+                        text = "TASKS",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 12.sp
                     )
@@ -187,7 +187,7 @@ fun ActionButtonsRow(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "GASTOS",
+                        text = "EXPENSES",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 12.sp
                     )
@@ -216,7 +216,7 @@ fun ActionButtonsRow(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "COMPRA",
+                        text = "GROCERY",
                         color = KippoColors.DarkText,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 12.sp
@@ -242,7 +242,7 @@ fun ActionButtonsRow(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "RECOMPENSAS",
+                        text = "REWARDS",
                         color = KippoColors.DarkText,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 12.sp
@@ -274,7 +274,7 @@ fun CreatePickerSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "¿Qué quieres añadir?",
+                text = "What do you want to add?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 color = KippoColors.DarkText,
@@ -309,13 +309,13 @@ fun CreatePickerSheet(
                     }
                     Column {
                         Text(
-                            "Nueva tarea",
+                            "New Task",
                             fontWeight = FontWeight.Bold,
                             color = KippoColors.DarkText,
                             fontSize = 15.sp
                         )
                         Text(
-                            "Asigna una tarea al hogar",
+                            "Assign a task to the household",
                             color = KippoColors.DarkText.copy(alpha = 0.5f),
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -357,13 +357,13 @@ fun CreatePickerSheet(
                     }
                     Column {
                         Text(
-                            "Nuevo gasto",
+                            "New Expense",
                             fontWeight = FontWeight.Bold,
                             color = KippoColors.DarkText,
                             fontSize = 15.sp
                         )
                         Text(
-                            "Registra un gasto compartido",
+                            "Register a shared expense",
                             color = KippoColors.DarkText.copy(alpha = 0.5f),
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -405,13 +405,13 @@ fun CreatePickerSheet(
                     }
                     Column {
                         Text(
-                            "Lista de compra",
+                            "Grocery List",
                             fontWeight = FontWeight.Bold,
                             color = KippoColors.DarkText,
                             fontSize = 15.sp
                         )
                         Text(
-                            "Crea una nueva lista de la compra",
+                            "Create a new grocery list",
                             color = KippoColors.DarkText.copy(alpha = 0.5f),
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -434,15 +434,14 @@ fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
     var displayedMonth by remember { mutableStateOf(YearMonth.now()) }
 
     val monthName = displayedMonth.month
-        .getDisplayName(TextStyle.FULL, Locale("es"))
+        .getDisplayName(TextStyle.FULL, Locale.ENGLISH)
         .replaceFirstChar { it.uppercase() }
 
     val firstDayOfMonth = displayedMonth.atDay(1)
-    // Monday = 1 ... Sunday = 7, we want Monday as first column (index 0)
     val startOffset = (firstDayOfMonth.dayOfWeek.value - 1)
     val daysInMonth = displayedMonth.lengthOfMonth()
 
-    val dayLabels = listOf("L", "M", "X", "J", "V", "S", "D")
+    val dayLabels = listOf("M", "T", "W", "T", "F", "S", "S")
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -451,7 +450,6 @@ fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header: month nav
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -462,7 +460,7 @@ fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
                 ) {
                     Icon(
                         Icons.Default.ChevronLeft,
-                        contentDescription = "Mes anterior",
+                        contentDescription = "Previous month",
                         tint = KippoColors.Teal
                     )
                 }
@@ -480,7 +478,7 @@ fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
                 ) {
                     Icon(
                         Icons.Default.ChevronRight,
-                        contentDescription = "Mes siguiente",
+                        contentDescription = "Next month",
                         tint = KippoColors.Teal
                     )
                 }
@@ -488,7 +486,6 @@ fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
 
             Spacer(Modifier.height(8.dp))
 
-            // Day headers
             Row(modifier = Modifier.fillMaxWidth()) {
                 dayLabels.forEach { label ->
                     Text(
@@ -504,7 +501,6 @@ fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
 
             Spacer(Modifier.height(4.dp))
 
-            // Day cells
             val totalCells = startOffset + daysInMonth
             val rows = (totalCells + 6) / 7
 

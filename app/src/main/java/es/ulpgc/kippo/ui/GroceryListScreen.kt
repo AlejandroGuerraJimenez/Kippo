@@ -47,10 +47,10 @@ fun GroceryListScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Listas de Compra", fontWeight = FontWeight.ExtraBold) },
+                title = { Text("Grocery Lists", fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateHome) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -72,7 +72,7 @@ fun GroceryListScreen(
     ) { padding ->
         if (groceryLists.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No hay listas de compra todavía", color = KippoColors.DarkText.copy(alpha = 0.5f))
+                Text("No grocery lists yet", color = KippoColors.DarkText.copy(alpha = 0.5f))
             }
         } else {
             LazyColumn(
@@ -133,12 +133,12 @@ fun GroceryListCard(
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onDeleteList) {
-                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red.copy(alpha = 0.4f))
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.4f))
                 }
                 IconButton(onClick = { isExpanded = !isExpanded }) {
                     Icon(
                         if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = "Expandir"
+                        contentDescription = "Expand"
                     )
                 }
             }
@@ -176,7 +176,7 @@ fun GroceryListCard(
                     TextField(
                         value = newItemName,
                         onValueChange = { newItemName = it },
-                        placeholder = { Text("Añadir artículo...") },
+                        placeholder = { Text("Add item...") },
                         modifier = Modifier.weight(1f),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -192,7 +192,7 @@ fun GroceryListCard(
                             }
                         }
                     ) {
-                        Icon(Icons.Default.AddCircle, contentDescription = "Añadir", tint = KippoColors.Teal)
+                        Icon(Icons.Default.AddCircle, contentDescription = "Add", tint = KippoColors.Teal)
                     }
                 }
             }

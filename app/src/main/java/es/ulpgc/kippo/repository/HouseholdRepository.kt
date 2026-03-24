@@ -32,12 +32,12 @@ class HouseholdRepository(
                         val userSnapshot = transaction.get(userRef)
                         val currentHousehold = userSnapshot.getString("current_household_id")
                         if (!currentHousehold.isNullOrBlank()) {
-                            throw IllegalStateException("Ya perteneces a un household")
+                            throw IllegalStateException("You already belong to a household")
                         }
 
                         val codeSnapshot = transaction.get(codeRef)
                         if (codeSnapshot.exists()) {
-                            throw IllegalStateException("El código de invitación ya existe")
+                            throw IllegalStateException("The invitation code already exists")
                         }
 
                         val payload = hashMapOf<String, Any>(
@@ -60,14 +60,14 @@ class HouseholdRepository(
                     }.await()
                     transactionSucceeded = true
                 } catch (ex: Exception) {
-                    if (ex.message?.contains("código de invitación ya existe") != true) {
+                    if (ex.message?.contains("invitation code already exists") != true) {
                         throw ex
                     }
                 }
             }
 
             if (!transactionSucceeded) {
-                return Result.failure(IllegalStateException("No se pudo generar un código único"))
+                return Result.failure(IllegalStateException("Could not generate a unique code"))
             }
 
             val createdHousehold = householdRef.get().await().toObject(Household::class.java)
@@ -85,12 +85,12 @@ class HouseholdRepository(
         return try {
             val joinCode = rawCode.filter { it.isDigit() }
             if (joinCode.length != 6) {
-                return Result.failure(IllegalArgumentException("El código debe tener 6 dígitos"))
+                return Result.failure(IllegalArgumentException("Code must have 6 digits"))
             }
 
             val userRef = usersCollection.document(userId)
             val householdId = resolveHouseholdIdByCode(joinCode)
-                ?: return Result.failure(IllegalArgumentException("Código no válido"))
+                ?: return Result.failure(IllegalArgumentException("Invalid code"))
 
             var joinedHouseholdRef = householdCollection.document("invalid")
 
@@ -98,21 +98,20 @@ class HouseholdRepository(
                 val userSnapshot = transaction.get(userRef)
                 val currentHousehold = userSnapshot.getString("current_household_id")
                 if (!currentHousehold.isNullOrBlank()) {
-                    throw IllegalStateException("Ya perteneces a un household")
+                    throw IllegalStateException("You already belong to a household")
                 }
 
                 val householdRef = householdCollection.document(householdId)
                 joinedHouseholdRef = householdRef
                 val householdSnapshot = transaction.get(householdRef)
                 if (!householdSnapshot.exists()) {
-                    throw IllegalStateException("El household asociado ya no existe")
+                    throw IllegalStateException("The associated household no longer exists")
                 }
 
                 transaction.update(householdRef, "members", FieldValue.arrayUnion(userId))
                 transaction.update(userRef, "current_household_id", householdId)
             }.await()
 
-            // Normaliza el índice de códigos para households legacy o incompletos.
             householdCodesCollection.document(joinCode)
                 .set(
                     mapOf(
@@ -170,7 +169,6 @@ class HouseholdRepository(
     }
 
     suspend fun removeMember(householdId: String, userIdToRemove: String): Result<Unit> {
-        // La lógica de removeMember es idéntica a leaveHousehold en términos de base de datos
         return leaveHousehold(userIdToRemove, householdId)
     }
 

@@ -35,10 +35,10 @@ fun CreateGroceryListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nueva Lista de Compra", fontWeight = FontWeight.Bold) },
+                title = { Text("New Grocery List", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -59,7 +59,7 @@ fun CreateGroceryListScreen(
             OutlinedTextField(
                 value = listName,
                 onValueChange = { listName = it },
-                label = { Text("Nombre de la lista (ej. Mercadona)") },
+                label = { Text("List name (e.g. Supermarket)") },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = KippoColors.Teal,
@@ -70,7 +70,7 @@ fun CreateGroceryListScreen(
             )
 
             Text(
-                "Añadir productos",
+                "Add items",
                 fontWeight = FontWeight.Bold,
                 color = KippoColors.DarkText,
                 fontSize = 16.sp
@@ -84,7 +84,7 @@ fun CreateGroceryListScreen(
                 OutlinedTextField(
                     value = itemText,
                     onValueChange = { itemText = it },
-                    placeholder = { Text("Ej. Leche") },
+                    placeholder = { Text("E.g. Milk") },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -98,7 +98,7 @@ fun CreateGroceryListScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Añadir")
+                    Icon(Icons.Default.Add, contentDescription = "Add")
                 }
             }
 
@@ -124,7 +124,7 @@ fun CreateGroceryListScreen(
                         ) {
                             Text(item, color = KippoColors.DarkText)
                             IconButton(onClick = { items.removeAt(index) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red.copy(alpha = 0.6f))
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.6f))
                             }
                         }
                     }
@@ -145,7 +145,7 @@ fun CreateGroceryListScreen(
                 shape = RoundedCornerShape(16.dp),
                 enabled = listName.isNotBlank()
             ) {
-                Text("Crear Lista", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Create List", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
     }

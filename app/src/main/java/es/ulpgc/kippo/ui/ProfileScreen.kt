@@ -78,7 +78,7 @@ fun ProfileSection(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = name.ifBlank { "Sin nombre" },
+                text = name.ifBlank { "No name" },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = KippoColors.DarkText
@@ -96,7 +96,7 @@ fun ProfileSection(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Puntos acumulados: $points",
+                text = "Accumulated points: $points",
                 style = MaterialTheme.typography.bodyLarge,
                 color = KippoColors.DarkTeal,
                 fontWeight = FontWeight.SemiBold
@@ -113,7 +113,7 @@ fun ProfileSection(
             ) {
                 Icon(Icons.Default.Edit, contentDescription = null)
                 Spacer(Modifier.size(8.dp))
-                Text("Editar perfil")
+                Text("Edit profile")
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -124,7 +124,7 @@ fun ProfileSection(
                 colors = ButtonDefaults.buttonColors(containerColor = KippoColors.DarkTeal),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Text("Cerrar sesión")
+                Text("Sign out")
             }
         }
     }
@@ -152,13 +152,13 @@ fun EditProfileDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isSaving) onDismiss() },
-        title = { Text("Editar perfil") },
+        title = { Text("Edit profile") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nombre") },
+                    label = { Text("Name") },
                     singleLine = true,
                     enabled = !isSaving,
                     colors = fieldColors
@@ -166,7 +166,7 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("Nombre de usuario") },
+                    label = { Text("Username") },
                     singleLine = true,
                     enabled = !isSaving,
                     colors = fieldColors
@@ -179,7 +179,7 @@ fun EditProfileDialog(
                 enabled = !isSaving,
                 colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.Yellow)
             ) {
-                Text(if (isSaving) "Guardando..." else "Guardar")
+                Text(if (isSaving) "Saving..." else "Save")
             }
         },
         dismissButton = {
@@ -188,10 +188,8 @@ fun EditProfileDialog(
                 enabled = !isSaving,
                 colors = ButtonDefaults.textButtonColors(contentColor = KippoColors.DarkTeal)
             ) {
-                Text("Cancelar")
+                Text("Cancel")
             }
         }
     )
 }
-
-

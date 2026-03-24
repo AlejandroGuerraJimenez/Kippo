@@ -88,7 +88,7 @@ fun KippoBottomBar(
                 IconButton(onClick = onGastosClick) {
                     Icon(
                         Icons.Default.AccountBalanceWallet,
-                        contentDescription = "Gastos",
+                        contentDescription = "Expenses",
                         tint = if (selectedDestination == BottomNavDestination.GASTOS) KippoColors.Teal else Color.LightGray,
                         modifier = Modifier.size(28.dp)
                     )
@@ -132,4 +132,3 @@ fun KippoBottomBar(
         }
     }
 }
-
