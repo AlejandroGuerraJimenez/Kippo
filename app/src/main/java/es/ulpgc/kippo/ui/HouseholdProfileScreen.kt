@@ -177,14 +177,19 @@ fun HouseholdProfileScreen(
                 
             }
             if (isAdmin) {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = { showPhotoOptionsSheet = true }) {
-                    Text("Edit")
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = { showPhotoOptionsSheet = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Edit Photo", fontWeight = FontWeight.Bold)                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = household.name,

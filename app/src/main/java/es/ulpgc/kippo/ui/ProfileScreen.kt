@@ -410,8 +410,16 @@ fun EditProfileDialog(
                         }
                     }
                 }
-                OutlinedButton(onClick = { showPhotoOptionsSheet = true }, enabled = !isSaving) {
-                    Text("Edit")
+                Button(
+                    onClick = { showPhotoOptionsSheet = true },
+                    enabled = !isSaving,
+                    colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Edit Photo", fontWeight = FontWeight.Bold)
                 }
             }
         },
