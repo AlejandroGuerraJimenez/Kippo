@@ -63,8 +63,10 @@ class TaskViewModel(
         val userId = auth.currentUser?.uid ?: return
         if (currentHouseholdId.isBlank()) return
         
+        val task = _tasks.value.find { it.id == taskId } ?: return
+        
         viewModelScope.launch {
-            taskRepository.toggleTaskCompletion(currentHouseholdId, taskId, completed, userId)
+            taskRepository.toggleTaskCompletion(currentHouseholdId, task, completed, userId)
         }
     }
 

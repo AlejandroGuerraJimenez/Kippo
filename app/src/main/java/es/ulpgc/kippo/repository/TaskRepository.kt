@@ -1,5 +1,6 @@
 package es.ulpgc.kippo.repository
 
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import es.ulpgc.kippo.model.Task
 import kotlinx.coroutines.channels.awaitClose
@@ -35,14 +36,26 @@ class TaskRepository(
         awaitClose { subscription.remove() }
     }
 
-    suspend fun toggleTaskCompletion(householdId: String, taskId: String, completed: Boolean, userId: String): Result<Unit> {
+    suspend fun toggleTaskCompletion(householdId: String, task: Task, completed: Boolean, userId: String): Result<Unit> {
         return try {
-            val updates = mapOf(
-                "completed" to completed,
-                "completedAt" to if (completed) com.google.firebase.Timestamp.now() else null,
-                "completedBy" to if (completed) userId else null
-            )
-            getTaskCollection(householdId).document(taskId).update(updates).await()
+            val taskRef = getTaskCollection(householdId).document(task.id)
+            val userRef = firestore.collection("users").document(userId)
+
+            firestore.runTransaction { transaction ->
+                // Actualizar la tarea
+                val taskUpdates = mutableMapOf<String, Any?>(
+                    "completed" to completed,
+                    "completedAt" to if (completed) com.google.firebase.Timestamp.now() else null,
+                    "completedBy" to if (completed) userId else null
+                )
+                transaction.update(taskRef, taskUpdates)
+
+                // Actualizar puntos del usuario
+                // Si se completa, sumamos. Si se desmarca (por error), restamos.
+                val pointsDelta = if (completed) task.points else -task.points
+                transaction.update(userRef, "total_points", FieldValue.increment(pointsDelta))
+            }.await()
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
