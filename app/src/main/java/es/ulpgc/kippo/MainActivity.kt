@@ -16,6 +16,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
 import java.time.ZoneId
 import es.ulpgc.kippo.model.Task
+import es.ulpgc.kippo.model.Reward
 import es.ulpgc.kippo.ui.*
 import es.ulpgc.kippo.viewmodel.ExpenseViewModel
 import es.ulpgc.kippo.viewmodel.GroceryViewModel
@@ -58,11 +59,9 @@ class MainActivity : ComponentActivity() {
                     val groceryVm: GroceryViewModel = viewModel()
                     
                     val household by homeVm.household.collectAsState()
-                    // Shared bottom navigation selection state used by HomeScreen and to request opening Profile
                     val currentSectionState = remember { mutableStateOf(es.ulpgc.kippo.ui.components.BottomNavDestination.HOME) }
                     val allTasks by taskVm.tasks.collectAsState()
 
-                    // Observe tasks as soon as household is available so CalendarWidget has data
                     LaunchedEffect(household?.id) {
                         household?.id?.let { taskVm.observeTasks(it) }
                     }
@@ -127,30 +126,37 @@ class MainActivity : ComponentActivity() {
                             onLoginSuccess = { screenState.value = "home_dispatch" },
                             onNavigateToRegister = { screenState.value = "register" }
                         )
-                        "home_dispatch" -> HomeDispatch(
-                            viewModel = homeVm,
-                            onSignOut = {
-                                auth.signOut()
-                                screenState.value = "login"
-                            },
-                            onCreateHouseholdRequested = { screenState.value = "create_household" },
-                            onJoinHouseholdRequested = { screenState.value = "join_household" },
-                            onNavigateToTasks = { screenState.value = "tasks" },
-                            onNavigateToGastos = { screenState.value = "gastos" },
-                            onNavigateToGroceries = { screenState.value = "grocery_list" },
-                            onNavigateToRewards = { screenState.value = "rewards" },
-                            onCreateTaskRequested = { showCreatePicker = true },
-                            onNavigateToHouseholdProfile = { screenState.value = "household_profile" },
-                            pendingTaskDates = pendingTaskDates,
-                            currentSectionState = currentSectionState,
-                            allTasks = allTasks,
-                            currentUserId = auth.currentUser?.uid ?: ""
-                        )
+                        "home_dispatch" -> {
+                            val customRewards by homeVm.customRewards.collectAsState()
+                            HomeDispatch(
+                                viewModel = homeVm,
+                                onSignOut = {
+                                    auth.signOut()
+                                    screenState.value = "login"
+                                },
+                                onCreateHouseholdRequested = { screenState.value = "create_household" },
+                                onJoinHouseholdRequested = { screenState.value = "join_household" },
+                                onNavigateToTasks = { screenState.value = "tasks" },
+                                onNavigateToGastos = { screenState.value = "gastos" },
+                                onNavigateToGroceries = { screenState.value = "grocery_list" },
+                                onNavigateToRewards = { screenState.value = "rewards" },
+                                onCreateTaskRequested = { showCreatePicker = true },
+                                onNavigateToHouseholdProfile = { screenState.value = "household_profile" },
+                                pendingTaskDates = pendingTaskDates,
+                                currentSectionState = currentSectionState,
+                                allTasks = allTasks,
+                                currentUserId = auth.currentUser?.uid ?: "",
+                                customRewards = customRewards
+                            )
+                        }
                         "rewards" -> {
+                            val customRewards by homeVm.customRewards.collectAsState()
                             RewardsScreen(
                                 userPoints = homeVm.currentUserProfile.collectAsState().value?.total_points ?: 0L,
+                                customRewards = customRewards,
                                 onBack = { screenState.value = "home_dispatch" },
-                                onPurchase = { reward -> homeVm.purchaseReward(reward) }
+                                onPurchase = { reward -> homeVm.purchaseReward(reward) },
+                                onCreateCustomReward = { title, desc, cost -> homeVm.createCustomReward(title, desc, cost) }
                             )
                         }
                         "create_household" -> CreateHouseholdScreen(
@@ -173,7 +179,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         "gastos" -> {
-                                ExpenseScreen(
+                            ExpenseScreen(
                                 householdId = household?.id ?: "",
                                 members = members,
                                 currentUserId = auth.currentUser?.uid ?: "",
@@ -231,7 +237,8 @@ fun HomeDispatch(
     pendingTaskDates: Set<LocalDate> = emptySet(),
     currentSectionState: MutableState<es.ulpgc.kippo.ui.components.BottomNavDestination>,
     allTasks: List<Task> = emptyList(),
-    currentUserId: String = ""
+    currentUserId: String = "",
+    customRewards: List<Reward> = emptyList()
 ) {
     val hasHousehold by viewModel.hasHousehold.collectAsState()
     val household by viewModel.household.collectAsState()
@@ -262,6 +269,7 @@ fun HomeDispatch(
             currentSectionState = currentSectionState,
             allTasks = allTasks,
             currentUserId = currentUserId,
+            customRewards = customRewards,
             viewModel = viewModel
         )
         false -> SetupHouseholdScreen(

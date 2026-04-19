@@ -10,10 +10,8 @@ import es.ulpgc.kippo.model.User
 import es.ulpgc.kippo.model.Reward
 import es.ulpgc.kippo.repository.HouseholdRepository
 import es.ulpgc.kippo.repository.UserRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -35,6 +33,9 @@ class HomeViewModel(
 
     private val _members = MutableStateFlow<List<User>>(emptyList())
     val members = _members.asStateFlow()
+
+    private val _customRewards = MutableStateFlow<List<Reward>>(emptyList())
+    val customRewards = _customRewards.asStateFlow()
 
     private val _leaveInProgress = MutableStateFlow(false)
     val leaveInProgress = _leaveInProgress.asStateFlow()
@@ -61,18 +62,33 @@ class HomeViewModel(
         userRepository.observeUser(currentUser.uid)
             .onEach { user ->
                 _currentUserProfile.value = user
-                currentHouseholdId = user?.current_household_id
+                val newHouseholdId = user?.current_household_id
+                
+                if (newHouseholdId != currentHouseholdId) {
+                    currentHouseholdId = newHouseholdId
+                    if (!newHouseholdId.isNullOrBlank()) {
+                        observeCustomRewards(newHouseholdId)
+                        refreshHouseholdData()
+                    } else {
+                        _customRewards.value = emptyList()
+                        _household.value = null
+                        _members.value = emptyList()
+                    }
+                }
+                
                 _hasHousehold.value = !currentHouseholdId.isNullOrBlank()
                 _errorMessage.value = null
-
-                if (!currentHouseholdId.isNullOrBlank()) {
-                    refreshHouseholdData()
-                } else {
-                    _household.value = null
-                    _members.value = emptyList()
-                }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun observeCustomRewards(householdId: String) {
+        firestore.collection("household").document(householdId).collection("rewards")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                val rewards = snapshot?.toObjects(Reward::class.java) ?: emptyList()
+                _customRewards.value = rewards
+            }
     }
 
     private fun refreshHouseholdData() {
@@ -99,83 +115,22 @@ class HomeViewModel(
         }
     }
 
-    fun updateHouseholdName(newName: String) {
+    fun createCustomReward(title: String, description: String, cost: Long) {
         val hid = currentHouseholdId ?: return
-        if (newName.isBlank()) return
-        
+        val newReward = Reward(
+            title = title,
+            description = description,
+            cost = cost,
+            householdId = hid,
+            icon = "redeem"
+        )
         viewModelScope.launch {
-            val result = householdRepository.updateHouseholdName(hid, newName)
-            result.onSuccess {
-                refreshHouseholdData()
-            }.onFailure { ex ->
-                _errorMessage.value = ex.message ?: "Could not update name"
+            try {
+                firestore.collection("household").document(hid).collection("rewards")
+                    .add(newReward).await()
+            } catch (e: Exception) {
+                _errorMessage.value = "Failed to create reward: ${e.message}"
             }
-        }
-    }
-
-    fun removeMember(userIdToRemove: String) {
-        val hid = currentHouseholdId ?: return
-        viewModelScope.launch {
-            val result = householdRepository.removeMember(hid, userIdToRemove)
-            result.onSuccess {
-                refreshHouseholdData()
-            }.onFailure { ex ->
-                _errorMessage.value = ex.message ?: "Could not remove member"
-            }
-        }
-    }
-
-    fun leaveHousehold() {
-        val userId = auth.currentUser?.uid
-        val householdId = currentHouseholdId
-
-        if (userId != null && householdId != null) {
-            viewModelScope.launch {
-                _leaveInProgress.value = true
-                val result = householdRepository.leaveHousehold(userId, householdId)
-                result.onFailure { ex ->
-                    _errorMessage.value = ex.message ?: "Could not leave household"
-                }
-                _leaveInProgress.value = false
-            }
-        }
-    }
-
-    fun clearError() {
-        _errorMessage.value = null
-    }
-
-    fun updateProfile(name: String, username: String) {
-        val uid = auth.currentUser?.uid ?: return
-        val cleanName = name.trim()
-        val cleanUsername = username.trim()
-
-        if (cleanName.isBlank()) {
-            _errorMessage.value = "Name cannot be empty"
-            return
-        }
-
-        if (cleanUsername.isBlank()) {
-            _errorMessage.value = "Username cannot be empty"
-            return
-        }
-
-        viewModelScope.launch {
-            _profileUpdateInProgress.value = true
-            val avatar = _currentUserProfile.value?.profileicon?.ifBlank { "placeholder_avatar" }
-                ?: "placeholder_avatar"
-
-            val result = userRepository.updateUserProfile(
-                uid = uid,
-                name = cleanName,
-                username = cleanUsername,
-                profileIcon = avatar
-            )
-
-            result.onFailure { ex ->
-                _errorMessage.value = ex.message ?: "Could not update profile"
-            }
-            _profileUpdateInProgress.value = false
         }
     }
 
@@ -193,6 +148,40 @@ class HomeViewModel(
             } catch (e: Exception) {
                 _errorMessage.value = "Purchase failed: ${e.message}"
             }
+        }
+    }
+
+    fun updateProfile(name: String, username: String) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _profileUpdateInProgress.value = true
+            val avatar = _currentUserProfile.value?.profileicon ?: "placeholder_avatar"
+            userRepository.updateUserProfile(uid, name, username, avatar)
+            _profileUpdateInProgress.value = false
+        }
+    }
+
+    fun updateHouseholdName(newName: String) {
+        val hid = currentHouseholdId ?: return
+        viewModelScope.launch {
+            householdRepository.updateHouseholdName(hid, newName)
+            refreshHouseholdData()
+        }
+    }
+
+    fun removeMember(userId: String) {
+        val hid = currentHouseholdId ?: return
+        viewModelScope.launch {
+            householdRepository.removeMember(hid, userId)
+            refreshHouseholdData()
+        }
+    }
+
+    fun leaveHousehold() {
+        val uid = auth.currentUser?.uid ?: return
+        val hid = currentHouseholdId ?: return
+        viewModelScope.launch {
+            householdRepository.leaveHousehold(uid, hid)
         }
     }
 

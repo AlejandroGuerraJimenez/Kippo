@@ -36,6 +36,7 @@ fun ProfileSection(
     profileIconKey: String,
     completedTasks: List<Task> = emptyList(),
     purchasedRewards: List<String> = emptyList(),
+    customRewards: List<Reward> = emptyList(),
     onEditProfile: () -> Unit,
     onSignOut: () -> Unit
 ) {
@@ -45,6 +46,7 @@ fun ProfileSection(
         PointsHistoryDialog(
             tasks = completedTasks,
             purchasedRewards = purchasedRewards,
+            customRewards = customRewards,
             onDismiss = { showPointsHistory = false }
         )
     }
@@ -209,8 +211,11 @@ fun ProfileSection(
 fun PointsHistoryDialog(
     tasks: List<Task>,
     purchasedRewards: List<String> = emptyList(),
+    customRewards: List<Reward> = emptyList(),
     onDismiss: () -> Unit
 ) {
+    val allPossibleRewards = Reward.SAMPLE_REWARDS + customRewards
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -239,11 +244,13 @@ fun PointsHistoryDialog(
                     }
                     // Compras que restan puntos
                     items(purchasedRewards) { rewardTitle ->
-                        // Buscamos el coste real del reward por su título
-                        val cost = Reward.SAMPLE_REWARDS.find { it.title == rewardTitle }?.cost ?: 0
+                        // Buscamos el coste real del reward tanto en fijos como en personalizados
+                        // Usamos ignoreCase para mayor seguridad al comparar títulos
+                        val rewardInfo = allPossibleRewards.find { it.title.equals(rewardTitle, ignoreCase = true) }
+                        val cost = rewardInfo?.cost ?: 0
                         HistoryItem(
                             title = "Reward: $rewardTitle",
-                            points = "-$cost",
+                            points = if (cost > 0) "-$cost" else "0",
                             color = Color(0xFFE53935),
                             icon = Icons.Default.RemoveCircle
                         )

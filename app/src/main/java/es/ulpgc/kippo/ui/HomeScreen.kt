@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import es.ulpgc.kippo.R
 import es.ulpgc.kippo.model.Task
 import es.ulpgc.kippo.model.User
+import es.ulpgc.kippo.model.Reward
 import es.ulpgc.kippo.viewmodel.HomeViewModel
 import es.ulpgc.kippo.ui.components.BottomNavDestination
 import es.ulpgc.kippo.ui.components.KippoBottomBar
@@ -53,6 +54,7 @@ fun HomeScreen(
     profileIconKey: String = "placeholder_avatar",
     profileUpdateInProgress: Boolean = false,
     purchasedRewards: List<String> = emptyList(),
+    customRewards: List<Reward> = emptyList(),
     errorMessage: String? = null,
     onDismissError: () -> Unit = {},
     onEditProfile: (String, String) -> Unit = { _, _ -> },
@@ -126,6 +128,7 @@ fun HomeScreen(
                     profileIconKey = profileIconKey,
                     completedTasks = userCompletedTasks,
                     purchasedRewards = purchasedRewards,
+                    customRewards = customRewards,
                     onEditProfile = { showEditProfileDialog = true },
                     onSignOut = onSignOut
                 )

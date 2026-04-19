@@ -1,11 +1,14 @@
 package es.ulpgc.kippo.model
 
+import com.google.firebase.firestore.DocumentId
+
 data class Reward(
-    val id: String = "",
+    @DocumentId val id: String = "",
     val title: String = "",
     val description: String = "",
     val cost: Long = 0,
-    val icon: String = "redeem"
+    val icon: String = "redeem",
+    val householdId: String = ""
 ) {
     companion object {
         val SAMPLE_REWARDS = listOf(
