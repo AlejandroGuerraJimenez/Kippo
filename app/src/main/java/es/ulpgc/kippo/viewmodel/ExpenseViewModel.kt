@@ -58,7 +58,8 @@ class ExpenseViewModel(
         splitAmong: List<String>,
         category: String,
         notes: String,
-        customSplits: Map<String, Double> = emptyMap()
+        customSplits: Map<String, Double> = emptyMap(),
+        receiptImageBase64: String? = null
     ) {
         if (currentHouseholdId.isBlank()) return
         val createdBy = auth.currentUser?.uid ?: return
@@ -71,7 +72,8 @@ class ExpenseViewModel(
             householdId = currentHouseholdId,
             notes = notes,
             createdBy = createdBy,
-            customSplits = customSplits
+            customSplits = customSplits,
+            receiptImageBase64 = receiptImageBase64
         )
         viewModelScope.launch {
             expenseRepository.addExpense(expense).onFailure {

@@ -1,7 +1,10 @@
 package es.ulpgc.kippo.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import es.ulpgc.kippo.model.Household
 import es.ulpgc.kippo.model.User
+import es.ulpgc.kippo.ui.components.PhotoSourceBottomSheet
+import es.ulpgc.kippo.util.ImageUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,11 +39,38 @@ fun HouseholdProfileScreen(
     members: List<User>,
     onBack: () -> Unit,
     onUpdateName: (String) -> Unit = {},
+    onUpdateImage: (String) -> Unit = {},
     onRemoveMember: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
     val isAdmin = household.creatorId == currentUserId
+    var showPhotoOptionsSheet by remember { mutableStateOf(false) }
+    val householdImageBitmap = remember(household.imageUrl) {
+        ImageUtils.decodeToImageBitmapOrNull(household.imageUrl)
+    }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            ImageUtils.uriToBase64(context, uri)?.let(onUpdateImage)
+        }
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            onUpdateImage(ImageUtils.bitmapToBase64(bitmap))
+        }
+    }
+    if (showPhotoOptionsSheet) {
+        PhotoSourceBottomSheet(
+            onDismiss = { showPhotoOptionsSheet = false },
+            onTakePhoto = { cameraLauncher.launch(null) },
+            onSelectPhoto = { imagePickerLauncher.launch("image/*") }
+        )
+    }
     
     var showEditNameDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf(household.name) }
@@ -117,7 +151,7 @@ fun HouseholdProfileScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Profile Picture Section
+            // Household photo section
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -125,26 +159,27 @@ fun HouseholdProfileScreen(
                     .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Home,
-                    contentDescription = null,
-                    modifier = Modifier.size(60.dp),
-                    tint = KippoColors.Teal
-                )
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.2f))
-                        .clickable { /* Future: Image Picker */ },
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = "Change photo",
-                        tint = Color.White,
-                        modifier = Modifier.padding(bottom = 8.dp).size(20.dp)
+                if (householdImageBitmap != null) {
+                    Image(
+                        bitmap = householdImageBitmap,
+                        contentDescription = "Household photo",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = null,
+                        modifier = Modifier.size(60.dp),
+                        tint = KippoColors.Teal
+                    )
+                }
+                
+            }
+            if (isAdmin) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = { showPhotoOptionsSheet = true }) {
+                    Text("Edit")
                 }
             }
 

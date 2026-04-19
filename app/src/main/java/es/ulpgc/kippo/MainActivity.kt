@@ -91,8 +91,8 @@ class MainActivity : ComponentActivity() {
                             members = members,
                             currentUserId = auth.currentUser?.uid ?: "",
                             onDismiss = { showAddExpenseDialog = false },
-                            onAdd = { title, amount, paidBy, splitAmong, category, notes, customSplits ->
-                                expenseVm.addExpense(title, amount, paidBy, splitAmong, category, notes, customSplits)
+                            onAdd = { title, amount, paidBy, splitAmong, category, notes, customSplits, receiptImageBase64 ->
+                                expenseVm.addExpense(title, amount, paidBy, splitAmong, category, notes, customSplits, receiptImageBase64)
                             }
                         )
                     }
@@ -197,6 +197,7 @@ class MainActivity : ComponentActivity() {
                                     members = members,
                                     onBack = { screenState.value = "home_dispatch" },
                                     onUpdateName = { homeVm.updateHouseholdName(it) },
+                                    onUpdateImage = { homeVm.updateHouseholdImage(it) },
                                     onRemoveMember = { homeVm.removeMember(it) }
                                 )
                             } else {
@@ -258,7 +259,7 @@ fun HomeDispatch(
             profileIconKey = currentUserProfile?.profileicon.orEmpty(),
             profileUpdateInProgress = profileUpdateInProgress,
             purchasedRewards = currentUserProfile?.purchased_rewards ?: emptyList(),
-            onEditProfile = { name, username -> viewModel.updateProfile(name, username) },
+            onEditProfile = { name, username, imageBase64 -> viewModel.updateProfile(name, username, imageBase64) },
             onNavigateToTasks = onNavigateToTasks,
             onNavigateToGastos = onNavigateToGastos,
             onNavigateToGroceries = onNavigateToGroceries,

@@ -181,6 +181,15 @@ class HouseholdRepository(
         }
     }
 
+    suspend fun updateHouseholdImage(householdId: String, imageBase64: String): Result<Unit> {
+        return try {
+            householdCollection.document(householdId).update("imageUrl", imageBase64).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getUserHousehold(userId: String): Result<Household?> {
         return try {
             val userSnapshot = usersCollection.document(userId).get().await()

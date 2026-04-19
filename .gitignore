@@ -62,3 +62,7 @@ cmake-build-*/
 # === Firebase configuration file ===
 app/src/google-services.json
 app/google-services.json
+
+.cursorignore
+.cursorrules
+.cursor/

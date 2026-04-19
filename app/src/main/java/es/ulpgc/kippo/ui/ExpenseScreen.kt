@@ -1,5 +1,10 @@
 package es.ulpgc.kippo.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -27,8 +34,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import es.ulpgc.kippo.model.Expense
 import es.ulpgc.kippo.model.ExpenseCategory
 import es.ulpgc.kippo.model.User
+import es.ulpgc.kippo.ui.components.PhotoSourceBottomSheet
 import es.ulpgc.kippo.ui.components.BottomNavDestination
 import es.ulpgc.kippo.ui.components.KippoBottomBar
+import es.ulpgc.kippo.util.ImageUtils
 import es.ulpgc.kippo.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -557,6 +566,30 @@ fun ExpenseDetailDialog(
                 if (expense.notes.isNotBlank()) {
                     ExpenseDetailRow("Notes:", expense.notes)
                 }
+                val receiptBitmap = remember(expense.receiptImageBase64) {
+                    ImageUtils.decodeToImageBitmapOrNull(expense.receiptImageBase64)
+                }
+                if (receiptBitmap != null) {
+                    Text(
+                        text = "Receipt:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = KippoColors.DarkText.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Image(
+                            bitmap = receiptBitmap,
+                            contentDescription = "Receipt image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
                 expense.createdAt?.let {
                     ExpenseDetailRow("Date:", dateFormat.format(it))
                 }
@@ -596,8 +629,18 @@ fun AddExpenseDialog(
     members: List<User>,
     currentUserId: String,
     onDismiss: () -> Unit,
-    onAdd: (title: String, amount: Double, paidBy: String, splitAmong: List<String>, category: String, notes: String, customSplits: Map<String, Double>) -> Unit
+    onAdd: (
+        title: String,
+        amount: Double,
+        paidBy: String,
+        splitAmong: List<String>,
+        category: String,
+        notes: String,
+        customSplits: Map<String, Double>,
+        receiptImageBase64: String?
+    ) -> Unit
 ) {
+    val context = LocalContext.current
     var title by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
     var paidBy by remember { mutableStateOf(currentUserId) }
@@ -606,6 +649,8 @@ fun AddExpenseDialog(
     var customAmounts by remember { mutableStateOf(members.associate { it.uid to "" }) }
     var selectedCategory by remember { mutableStateOf(ExpenseCategory.OTRO) }
     var notes by remember { mutableStateOf("") }
+    var receiptImageBase64 by remember { mutableStateOf<String?>(null) }
+    var showPhotoOptionsSheet by remember { mutableStateOf(false) }
     var paidByExpanded by remember { mutableStateOf(false) }
     var titleError by remember { mutableStateOf(false) }
     var amountError by remember { mutableStateOf(false) }
@@ -627,6 +672,30 @@ fun AddExpenseDialog(
         focusedTextColor = KippoColors.DarkText,
         unfocusedTextColor = KippoColors.DarkText
     )
+    val receiptPreview = remember(receiptImageBase64) {
+        ImageUtils.decodeToImageBitmapOrNull(receiptImageBase64)
+    }
+    val receiptPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            receiptImageBase64 = ImageUtils.uriToBase64(context, uri)
+        }
+    }
+    val receiptCameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            receiptImageBase64 = ImageUtils.bitmapToBase64(bitmap)
+        }
+    }
+    if (showPhotoOptionsSheet) {
+        PhotoSourceBottomSheet(
+            onDismiss = { showPhotoOptionsSheet = false },
+            onTakePhoto = { receiptCameraLauncher.launch(null) },
+            onSelectPhoto = { receiptPickerLauncher.launch("image/*") }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -902,6 +971,43 @@ fun AddExpenseDialog(
                     shape = RoundedCornerShape(12.dp),
                     colors = fieldColors
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = { showPhotoOptionsSheet = true },
+                        border = BorderStroke(1.dp, KippoColors.Teal.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.AddAPhoto, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Attach photo")
+                    }
+                }
+                if (receiptImageBase64 != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        TextButton(onClick = { receiptImageBase64 = null }) {
+                            Text("Remove")
+                        }
+                    }
+                }
+                if (receiptPreview != null) {
+                    Card(shape = RoundedCornerShape(12.dp)) {
+                        Image(
+                            bitmap = receiptPreview,
+                            contentDescription = "Receipt preview",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(140.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
@@ -924,7 +1030,8 @@ fun AddExpenseDialog(
                             title, amount!!, paidBy,
                             splitAmong.toList(),
                             selectedCategory.key, notes,
-                            resolvedCustomSplits
+                            resolvedCustomSplits,
+                            receiptImageBase64
                         )
                         onDismiss()
                     }

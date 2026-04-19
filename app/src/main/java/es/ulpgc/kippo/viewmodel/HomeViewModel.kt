@@ -151,11 +151,11 @@ class HomeViewModel(
         }
     }
 
-    fun updateProfile(name: String, username: String) {
+    fun updateProfile(name: String, username: String, profileIconBase64: String? = null) {
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
             _profileUpdateInProgress.value = true
-            val avatar = _currentUserProfile.value?.profileicon ?: "placeholder_avatar"
+            val avatar = profileIconBase64 ?: _currentUserProfile.value?.profileicon ?: "placeholder_avatar"
             userRepository.updateUserProfile(uid, name, username, avatar)
             _profileUpdateInProgress.value = false
         }
@@ -165,6 +165,14 @@ class HomeViewModel(
         val hid = currentHouseholdId ?: return
         viewModelScope.launch {
             householdRepository.updateHouseholdName(hid, newName)
+            refreshHouseholdData()
+        }
+    }
+
+    fun updateHouseholdImage(imageBase64: String) {
+        val hid = currentHouseholdId ?: return
+        viewModelScope.launch {
+            householdRepository.updateHouseholdImage(hid, imageBase64)
             refreshHouseholdData()
         }
     }

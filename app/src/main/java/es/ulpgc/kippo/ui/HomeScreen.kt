@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -29,6 +30,7 @@ import es.ulpgc.kippo.model.Reward
 import es.ulpgc.kippo.viewmodel.HomeViewModel
 import es.ulpgc.kippo.ui.components.BottomNavDestination
 import es.ulpgc.kippo.ui.components.KippoBottomBar
+import es.ulpgc.kippo.util.ImageUtils
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -57,7 +59,7 @@ fun HomeScreen(
     customRewards: List<Reward> = emptyList(),
     errorMessage: String? = null,
     onDismissError: () -> Unit = {},
-    onEditProfile: (String, String) -> Unit = { _, _ -> },
+    onEditProfile: (String, String, String?) -> Unit = { _, _, _ -> },
     allTasks: List<Task> = emptyList(),
     currentUserId: String = "",
     viewModel: HomeViewModel = viewModel()
@@ -73,36 +75,37 @@ fun HomeScreen(
         EditProfileDialog(
             initialName = profileName,
             initialUsername = profileUsername,
+            initialProfileIcon = profileIconKey,
             isSaving = profileUpdateInProgress,
             onDismiss = { showEditProfileDialog = false },
-            onSave = { newName, newUsername ->
-                onEditProfile(newName, newUsername)
+            onSave = { newName, newUsername, newProfileIconBase64 ->
+                onEditProfile(newName, newUsername, newProfileIconBase64)
                 if (!profileUpdateInProgress) {
                     showEditProfileDialog = false
                 }
             }
         )
     }
-
     Scaffold(
-        topBar = { 
-            KippoTopBar(
-                householdName = household?.name ?: "Kippo",
-                onProfileClick = onNavigateToHouseholdProfile
-            ) 
-        },
-        bottomBar = {
-            KippoBottomBar(
-                selectedDestination = currentSectionState.value,
-                onHomeClick = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.HOME },
-                onTasksClick = onNavigateToTasks,
-                onCreateClick = onCreateTaskRequested,
-                onGastosClick = onNavigateToGastos,
-                onProfileClick = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE }
-            )
-        },
-        containerColor = KippoColors.Background
-    ) { padding ->
+            topBar = {
+                KippoTopBar(
+                    householdName = household?.name ?: "Kippo",
+                    householdImageBase64 = household?.imageUrl,
+                    onProfileClick = onNavigateToHouseholdProfile
+                )
+            },
+            bottomBar = {
+                KippoBottomBar(
+                    selectedDestination = currentSectionState.value,
+                    onHomeClick = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.HOME },
+                    onTasksClick = onNavigateToTasks,
+                    onCreateClick = onCreateTaskRequested,
+                    onGastosClick = onNavigateToGastos,
+                    onProfileClick = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE }
+                )
+            },
+            containerColor = KippoColors.Background
+        ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -308,15 +311,27 @@ fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
                     }
                 }
             }
+            }
         }
     }
-}
 
 @Composable
-fun KippoTopBar(householdName: String, onProfileClick: () -> Unit) {
+fun KippoTopBar(householdName: String, householdImageBase64: String? = null, onProfileClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Surface(shape = CircleShape, color = Color.White, modifier = Modifier.size(52.dp).clickable { onProfileClick() }, shadowElevation = 2.dp) {
-            Image(painter = painterResource(id = R.drawable.ic_logo_kippo), contentDescription = "Logo", modifier = Modifier.padding(8.dp))
+            Box(contentAlignment = Alignment.Center) {
+                val hb = remember(householdImageBase64) { ImageUtils.decodeToImageBitmapOrNull(householdImageBase64) }
+                if (hb != null) {
+                    Image(
+                        bitmap = hb,
+                        contentDescription = "Household image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(painter = painterResource(id = R.drawable.ic_logo_kippo), contentDescription = "Logo", modifier = Modifier.padding(8.dp))
+                }
+            }
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f).clickable { onProfileClick() }) {

@@ -1,6 +1,7 @@
 package es.ulpgc.kippo.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,12 +21,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import es.ulpgc.kippo.model.Task
 import es.ulpgc.kippo.model.Reward
+import es.ulpgc.kippo.ui.components.PhotoSourceBottomSheet
+import es.ulpgc.kippo.util.ImageUtils
 
 @Composable
 fun ProfileSection(
@@ -106,13 +113,23 @@ fun ProfileSection(
                     modifier = Modifier.size(100.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        val avatarTint = if (profileIconKey == "placeholder_avatar") KippoColors.DarkTeal else KippoColors.Teal
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Profile avatar",
-                            tint = avatarTint,
-                            modifier = Modifier.size(88.dp)
-                        )
+                        val avatarBitmap = remember(profileIconKey) { ImageUtils.decodeToImageBitmapOrNull(profileIconKey) }
+                        if (avatarBitmap != null) {
+                            Image(
+                                bitmap = avatarBitmap,
+                                contentDescription = "Profile avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            val avatarTint = if (profileIconKey == "placeholder_avatar") KippoColors.DarkTeal else KippoColors.Teal
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = "Profile avatar",
+                                tint = avatarTint,
+                                modifier = Modifier.size(88.dp)
+                            )
+                        }
                     }
                 }
 
@@ -300,12 +317,32 @@ fun HistoryItem(title: String, points: String, color: Color, icon: ImageVector) 
 fun EditProfileDialog(
     initialName: String,
     initialUsername: String,
+    initialProfileIcon: String,
     isSaving: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String, String, String?) -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember(initialName) { mutableStateOf(initialName) }
     var username by remember(initialUsername) { mutableStateOf(initialUsername) }
+    var selectedProfileImageBase64 by remember(initialProfileIcon) { mutableStateOf<String?>(null) }
+    var showPhotoOptionsSheet by remember { mutableStateOf(false) }
+    val imagePreviewData = selectedProfileImageBase64 ?: initialProfileIcon
+    val imagePreview = remember(imagePreviewData) { ImageUtils.decodeToImageBitmapOrNull(imagePreviewData) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            selectedProfileImageBase64 = ImageUtils.uriToBase64(context, uri)
+        }
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            selectedProfileImageBase64 = ImageUtils.bitmapToBase64(bitmap)
+        }
+    }
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = KippoColors.Teal,
         unfocusedBorderColor = KippoColors.DarkTeal.copy(alpha = 0.3f),
@@ -315,6 +352,13 @@ fun EditProfileDialog(
         focusedTextColor = KippoColors.DarkText,
         unfocusedTextColor = KippoColors.DarkText
     )
+    if (showPhotoOptionsSheet) {
+        PhotoSourceBottomSheet(
+            onDismiss = { showPhotoOptionsSheet = false },
+            onTakePhoto = { cameraLauncher.launch(null) },
+            onSelectPhoto = { imagePickerLauncher.launch("image/*") }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = { if (!isSaving) onDismiss() },
@@ -341,11 +385,39 @@ fun EditProfileDialog(
                     colors = fieldColors,
                     shape = RoundedCornerShape(12.dp)
                 )
+                Surface(
+                    shape = CircleShape,
+                    color = KippoColors.Background,
+                    modifier = Modifier
+                        .size(84.dp)
+                        .align(Alignment.CenterHorizontally)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (imagePreview != null) {
+                            Image(
+                                bitmap = imagePreview,
+                                contentDescription = "Profile photo preview",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                tint = KippoColors.Teal,
+                                modifier = Modifier.size(74.dp)
+                            )
+                        }
+                    }
+                }
+                OutlinedButton(onClick = { showPhotoOptionsSheet = true }, enabled = !isSaving) {
+                    Text("Edit")
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSave(name, username) },
+                onClick = { onSave(name, username, selectedProfileImageBase64) },
                 enabled = !isSaving,
                 colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
                 shape = RoundedCornerShape(8.dp)

@@ -14,6 +14,7 @@ data class Expense(
     val category: String = "otro",
     val householdId: String = "",
     val notes: String = "",
+    val receiptImageBase64: String? = null,
     @ServerTimestamp val createdAt: Date? = null,
     val createdBy: String = ""
 )
