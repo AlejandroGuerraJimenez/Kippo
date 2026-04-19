@@ -138,6 +138,7 @@ class MainActivity : ComponentActivity() {
                             onNavigateToTasks = { screenState.value = "tasks" },
                             onNavigateToGastos = { screenState.value = "gastos" },
                             onNavigateToGroceries = { screenState.value = "grocery_list" },
+                            onNavigateToRewards = { screenState.value = "rewards" },
                             onCreateTaskRequested = { showCreatePicker = true },
                             onNavigateToHouseholdProfile = { screenState.value = "household_profile" },
                             pendingTaskDates = pendingTaskDates,
@@ -145,6 +146,13 @@ class MainActivity : ComponentActivity() {
                             allTasks = allTasks,
                             currentUserId = auth.currentUser?.uid ?: ""
                         )
+                        "rewards" -> {
+                            RewardsScreen(
+                                userPoints = homeVm.currentUserProfile.collectAsState().value?.total_points ?: 0L,
+                                onBack = { screenState.value = "home_dispatch" },
+                                onPurchase = { reward -> homeVm.purchaseReward(reward) }
+                            )
+                        }
                         "create_household" -> CreateHouseholdScreen(
                             onHouseholdCreated = { screenState.value = "home_dispatch" }
                         )
@@ -217,6 +225,7 @@ fun HomeDispatch(
     onNavigateToTasks: () -> Unit,
     onNavigateToGastos: () -> Unit = {},
     onNavigateToGroceries: () -> Unit = {},
+    onNavigateToRewards: () -> Unit = {},
     onCreateTaskRequested: () -> Unit,
     onNavigateToHouseholdProfile: () -> Unit,
     pendingTaskDates: Set<LocalDate> = emptySet(),
@@ -241,11 +250,13 @@ fun HomeDispatch(
             profilePoints = currentUserProfile?.total_points ?: 0L,
             profileIconKey = currentUserProfile?.profileicon.orEmpty(),
             profileUpdateInProgress = profileUpdateInProgress,
+            purchasedRewards = currentUserProfile?.purchased_rewards ?: emptyList(),
             onEditProfile = { name, username -> viewModel.updateProfile(name, username) },
             onNavigateToTasks = onNavigateToTasks,
             onNavigateToGastos = onNavigateToGastos,
             onNavigateToGroceries = onNavigateToGroceries,
-            onCreateTaskClick = onCreateTaskRequested,
+            onNavigateToRewards = onNavigateToRewards,
+            onCreateTaskRequested = onCreateTaskRequested,
             onNavigateToHouseholdProfile = onNavigateToHouseholdProfile,
             pendingTaskDates = pendingTaskDates,
             currentSectionState = currentSectionState,

@@ -41,10 +41,10 @@ fun HomeScreen(
     onNavigateToTasks: () -> Unit = {},
     onNavigateToGastos: () -> Unit = {},
     onNavigateToGroceries: () -> Unit = {},
+    onNavigateToRewards: () -> Unit = {},
     pendingTaskDates: Set<LocalDate> = emptySet(),
-    onCreateTaskClick: () -> Unit = {},
+    onCreateTaskRequested: () -> Unit = {},
     onNavigateToHouseholdProfile: () -> Unit = {},
-    // external state to control which bottom tab is selected (allows other screens to request Profile)
     currentSectionState: MutableState<es.ulpgc.kippo.ui.components.BottomNavDestination>,
     profileName: String = "",
     profileUsername: String = "",
@@ -52,18 +52,17 @@ fun HomeScreen(
     profilePoints: Long = 0,
     profileIconKey: String = "placeholder_avatar",
     profileUpdateInProgress: Boolean = false,
+    purchasedRewards: List<String> = emptyList(),
     errorMessage: String? = null,
     onDismissError: () -> Unit = {},
     onEditProfile: (String, String) -> Unit = { _, _ -> },
-    allTasks: List<Task> = emptyList(), // Recibimos todas las tareas
-    currentUserId: String = "", // Recibimos el ID del usuario actual
+    allTasks: List<Task> = emptyList(),
+    currentUserId: String = "",
     viewModel: HomeViewModel = viewModel()
 ) {
     val household by viewModel.household.collectAsState()
-    
     var showEditProfileDialog by remember { mutableStateOf(false) }
 
-    // Filtramos las tareas completadas por el usuario actual para el historial
     val userCompletedTasks = remember(allTasks, currentUserId) {
         allTasks.filter { it.completed && it.completedBy == currentUserId }
     }
@@ -90,12 +89,12 @@ fun HomeScreen(
                 onProfileClick = onNavigateToHouseholdProfile
             ) 
         },
-            bottomBar = {
+        bottomBar = {
             KippoBottomBar(
                 selectedDestination = currentSectionState.value,
                 onHomeClick = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.HOME },
                 onTasksClick = onNavigateToTasks,
-                onCreateClick = onCreateTaskClick,
+                onCreateClick = onCreateTaskRequested,
                 onGastosClick = onNavigateToGastos,
                 onProfileClick = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE }
             )
@@ -113,11 +112,10 @@ fun HomeScreen(
                 ActionButtonsRow(
                     onTasksClick = onNavigateToTasks, 
                     onGastosClick = onNavigateToGastos,
-                    onGroceriesClick = onNavigateToGroceries
+                    onGroceriesClick = onNavigateToGroceries,
+                    onRewardsClick = onNavigateToRewards
                 )
-
                 Spacer(modifier = Modifier.height(20.dp))
-
                 CalendarWidget(pendingDates = pendingTaskDates)
             } else if (currentSectionState.value == es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE) {
                 ProfileSection(
@@ -126,7 +124,8 @@ fun HomeScreen(
                     email = profileEmail,
                     points = profilePoints,
                     profileIconKey = profileIconKey,
-                    completedTasks = userCompletedTasks, // Pasamos las tareas filtradas
+                    completedTasks = userCompletedTasks,
+                    purchasedRewards = purchasedRewards,
                     onEditProfile = { showEditProfileDialog = true },
                     onSignOut = onSignOut
                 )
@@ -141,7 +140,6 @@ fun HomeScreen(
                     modifier = Modifier.clickable { onDismissError() }
                 )
             }
-
             Spacer(modifier = Modifier.weight(1f))
         }
     }
@@ -151,7 +149,8 @@ fun HomeScreen(
 fun ActionButtonsRow(
     onTasksClick: () -> Unit, 
     onGastosClick: () -> Unit = {},
-    onGroceriesClick: () -> Unit = {}
+    onGroceriesClick: () -> Unit = {},
+    onRewardsClick: () -> Unit = {}
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -160,47 +159,27 @@ fun ActionButtonsRow(
         ) {
             Button(
                 onClick = onTasksClick,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(80.dp),
+                modifier = Modifier.weight(1f).height(80.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.TaskAlt,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    Icon(Icons.Default.TaskAlt, null, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "TASKS",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.sp
-                    )
+                    Text("TASKS", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                 }
             }
 
             Button(
                 onClick = onGastosClick,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(80.dp),
+                modifier = Modifier.weight(1f).height(80.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = KippoColors.DarkTeal),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    Icon(Icons.Default.AccountBalanceWallet, null, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "EXPENSES",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.sp
-                    )
+                    Text("EXPENSES", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                 }
             }
         }
@@ -211,52 +190,28 @@ fun ActionButtonsRow(
         ) {
             Button(
                 onClick = onGroceriesClick,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(80.dp),
+                modifier = Modifier.weight(1f).height(80.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Yellow),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingCart,
-                        contentDescription = null,
-                        tint = KippoColors.DarkText,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    Icon(Icons.Default.ShoppingCart, null, tint = KippoColors.DarkText, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "GROCERY",
-                        color = KippoColors.DarkText,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.sp
-                    )
+                    Text("GROCERY", color = KippoColors.DarkText, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                 }
             }
 
             Button(
-                onClick = { /* Navigate to Rewards */ },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(80.dp),
+                onClick = onRewardsClick,
+                modifier = Modifier.weight(1f).height(80.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 shape = RoundedCornerShape(16.dp),
                 border = BorderStroke(1.dp, KippoColors.Yellow)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.EmojiEvents,
-                        contentDescription = null,
-                        tint = KippoColors.Yellow,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    Icon(Icons.Default.EmojiEvents, null, tint = KippoColors.Yellow, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "REWARDS",
-                        color = KippoColors.DarkText,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.sp
-                    )
+                    Text("REWARDS", color = KippoColors.DarkText, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                 }
             }
         }
@@ -277,163 +232,36 @@ fun CreatePickerSheet(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 36.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "What do you want to add?",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = KippoColors.DarkText,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
+            Text("What do you want to add?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = KippoColors.DarkText, modifier = Modifier.padding(bottom = 4.dp))
 
-            Card(
-                onClick = { onSelectTask(); onDismiss() },
-                colors = CardDefaults.cardColors(containerColor = KippoColors.Teal.copy(alpha = 0.08f)),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(KippoColors.Teal, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.TaskAlt,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            "New Task",
-                            fontWeight = FontWeight.Bold,
-                            color = KippoColors.DarkText,
-                            fontSize = 15.sp
-                        )
-                        Text(
-                            "Assign a task to the household",
-                            color = KippoColors.DarkText.copy(alpha = 0.5f),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = KippoColors.Teal
-                    )
-                }
-            }
+            PickerCard("New Task", "Assign a task to the household", KippoColors.Teal, Icons.Default.TaskAlt) { onSelectTask(); onDismiss() }
+            PickerCard("New Expense", "Register a shared expense", KippoColors.DarkTeal, Icons.Default.AccountBalanceWallet) { onSelectExpense(); onDismiss() }
+            PickerCard("Grocery List", "Create a new grocery list", KippoColors.Yellow, Icons.Default.ShoppingCart) { onSelectGrocery(); onDismiss() }
+        }
+    }
+}
 
-            Card(
-                onClick = { onSelectExpense(); onDismiss() },
-                colors = CardDefaults.cardColors(containerColor = KippoColors.DarkTeal.copy(alpha = 0.08f)),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(KippoColors.DarkTeal, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.AccountBalanceWallet,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            "New Expense",
-                            fontWeight = FontWeight.Bold,
-                            color = KippoColors.DarkText,
-                            fontSize = 15.sp
-                        )
-                        Text(
-                            "Register a shared expense",
-                            color = KippoColors.DarkText.copy(alpha = 0.5f),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = KippoColors.DarkTeal
-                    )
-                }
+@Composable
+fun PickerCard(title: String, desc: String, color: Color, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.08f)),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(modifier = Modifier.size(48.dp).background(color, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
             }
-
-            Card(
-                onClick = { onSelectGrocery(); onDismiss() },
-                colors = CardDefaults.cardColors(containerColor = KippoColors.Yellow.copy(alpha = 0.08f)),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(KippoColors.Yellow, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            "Grocery List",
-                            fontWeight = FontWeight.Bold,
-                            color = KippoColors.DarkText,
-                            fontSize = 15.sp
-                        )
-                        Text(
-                            "Create a new grocery list",
-                            color = KippoColors.DarkText.copy(alpha = 0.5f),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = KippoColors.Yellow
-                    )
-                }
+            Column {
+                Text(title, fontWeight = FontWeight.Bold, color = KippoColors.DarkText, fontSize = 15.sp)
+                Text(desc, color = KippoColors.DarkText.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall)
             }
+            Spacer(Modifier.weight(1f))
+            Icon(Icons.Default.ChevronRight, null, tint = color)
         }
     }
 }
@@ -442,126 +270,35 @@ fun CreatePickerSheet(
 fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
     val today = remember { LocalDate.now() }
     var displayedMonth by remember { mutableStateOf(YearMonth.now()) }
-
-    val monthName = displayedMonth.month
-        .getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-        .replaceFirstChar { it.uppercase() }
-
+    val monthName = displayedMonth.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH).replaceFirstChar { it.uppercase() }
     val firstDayOfMonth = displayedMonth.atDay(1)
     val startOffset = (firstDayOfMonth.dayOfWeek.value - 1)
     val daysInMonth = displayedMonth.lengthOfMonth()
-
     val dayLabels = listOf("M", "T", "W", "T", "F", "S", "S")
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = { displayedMonth = displayedMonth.minusMonths(1) },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.Default.ChevronLeft,
-                        contentDescription = "Previous month",
-                        tint = KippoColors.Teal
-                    )
-                }
-                Text(
-                    text = "$monthName ${displayedMonth.year}",
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold,
-                    color = KippoColors.DarkText,
-                    fontSize = 15.sp
-                )
-                IconButton(
-                    onClick = { displayedMonth = displayedMonth.plusMonths(1) },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = "Next month",
-                        tint = KippoColors.Teal
-                    )
-                }
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { displayedMonth = displayedMonth.minusMonths(1) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.ChevronLeft, null, tint = KippoColors.Teal) }
+                Text(text = "$monthName ${displayedMonth.year}", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = KippoColors.DarkText, fontSize = 15.sp)
+                IconButton(onClick = { displayedMonth = displayedMonth.plusMonths(1) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.ChevronRight, null, tint = KippoColors.Teal) }
             }
-
             Spacer(Modifier.height(8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                dayLabels.forEach { label ->
-                    Text(
-                        text = label,
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = KippoColors.DarkText.copy(alpha = 0.4f)
-                    )
-                }
-            }
-
+            Row(modifier = Modifier.fillMaxWidth()) { dayLabels.forEach { Text(text = it, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = KippoColors.DarkText.copy(alpha = 0.4f)) } }
             Spacer(Modifier.height(4.dp))
-
-            val totalCells = startOffset + daysInMonth
-            val rows = (totalCells + 6) / 7
-
+            val rows = (startOffset + daysInMonth + 6) / 7
             for (row in 0 until rows) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     for (col in 0 until 7) {
-                        val cellIndex = row * 7 + col
-                        val day = cellIndex - startOffset + 1
-                        val isCurrentMonth = day in 1..daysInMonth
-                        val date = if (isCurrentMonth) displayedMonth.atDay(day) else null
-                        val isToday = date == today
-                        val hasPending = date != null && date in pendingDates
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .padding(2.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isCurrentMonth) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .then(
-                                                if (isToday) Modifier.background(KippoColors.Teal, CircleShape)
-                                                else Modifier
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = day.toString(),
-                                            fontSize = 13.sp,
-                                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isToday) Color.White else KippoColors.DarkText
-                                        )
+                        val day = row * 7 + col - startOffset + 1
+                        val date = if (day in 1..daysInMonth) displayedMonth.atDay(day) else null
+                        Box(modifier = Modifier.weight(1f).aspectRatio(1f).padding(2.dp), contentAlignment = Alignment.Center) {
+                            if (date != null) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(modifier = Modifier.size(28.dp).then(if (date == today) Modifier.background(KippoColors.Teal, CircleShape) else Modifier), contentAlignment = Alignment.Center) {
+                                        Text(text = day.toString(), fontSize = 13.sp, color = if (date == today) Color.White else KippoColors.DarkText)
                                     }
-                                    if (hasPending) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(4.dp)
-                                                .background(
-                                                    if (date!! < today) Color(0xFFE53935) else KippoColors.Teal,
-                                                    CircleShape
-                                                )
-                                        )
-                                    }
+                                    if (date in pendingDates) Box(modifier = Modifier.size(4.dp).background(if (date < today) Color(0xFFE53935) else KippoColors.Teal, CircleShape))
                                 }
                             }
                         }
@@ -574,62 +311,18 @@ fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
 
 @Composable
 fun KippoTopBar(householdName: String, onProfileClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(
-            shape = CircleShape,
-            color = Color.White,
-            modifier = Modifier
-                .size(52.dp)
-                .clickable { onProfileClick() },
-            shadowElevation = 2.dp
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_logo_kippo),
-                contentDescription = "Household Logo",
-                modifier = Modifier.padding(8.dp)
-            )
+    Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(shape = CircleShape, color = Color.White, modifier = Modifier.size(52.dp).clickable { onProfileClick() }, shadowElevation = 2.dp) {
+            Image(painter = painterResource(id = R.drawable.ic_logo_kippo), contentDescription = "Logo", modifier = Modifier.padding(8.dp))
         }
-
         Spacer(modifier = Modifier.width(16.dp))
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .clickable { onProfileClick() }
-        ) {
-            Text(
-                text = householdName,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 24.sp,
-                color = KippoColors.DarkText
-            )
-            Text(
-                text = "Kippo Household",
-                fontSize = 13.sp,
-                color = KippoColors.DarkText.copy(alpha = 0.5f)
-            )
+        Column(modifier = Modifier.weight(1f).clickable { onProfileClick() }) {
+            Text(text = householdName, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = KippoColors.DarkText)
+            Text(text = "Kippo Household", fontSize = 13.sp, color = KippoColors.DarkText.copy(alpha = 0.5f))
         }
-
         Box(contentAlignment = Alignment.TopEnd) {
-            Icon(
-                imageVector = Icons.Outlined.Notifications,
-                contentDescription = "Notifications",
-                tint = KippoColors.DarkText,
-                modifier = Modifier.size(28.dp)
-            )
-            Surface(
-                color = Color(0xFFE57373),
-                shape = CircleShape,
-                modifier = Modifier
-                    .size(10.dp)
-                    .offset(x = (-2).dp, y = (2).dp),
-                border = BorderStroke(1.5.dp, KippoColors.Background)
-            ) {}
+            Icon(Icons.Outlined.Notifications, null, tint = KippoColors.DarkText, modifier = Modifier.size(28.dp))
+            Surface(color = Color(0xFFE57373), shape = CircleShape, modifier = Modifier.size(10.dp).offset(x = (-2).dp, y = (2).dp), border = BorderStroke(1.5.dp, KippoColors.Background)) {}
         }
     }
 }

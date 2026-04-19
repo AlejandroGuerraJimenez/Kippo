@@ -9,6 +9,7 @@ data class User(
     val username: String = "",
     val profileicon: String = "placeholder_avatar",
     val total_points: Long = 0,
+    val purchased_rewards: List<String> = emptyList(),
     @get:PropertyName("current_household_id")
     @set:PropertyName("current_household_id")
     var current_household_id: String? = null

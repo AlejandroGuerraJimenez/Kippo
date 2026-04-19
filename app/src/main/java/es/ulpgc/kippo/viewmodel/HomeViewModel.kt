@@ -3,8 +3,11 @@ package es.ulpgc.kippo.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import es.ulpgc.kippo.model.Household
 import es.ulpgc.kippo.model.User
+import es.ulpgc.kippo.model.Reward
 import es.ulpgc.kippo.repository.HouseholdRepository
 import es.ulpgc.kippo.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,11 +15,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class HomeViewModel(
     private val userRepository: UserRepository = UserRepository(),
     private val householdRepository: HouseholdRepository = HouseholdRepository(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
 
     private val _hasHousehold = MutableStateFlow<Boolean?>(null)
@@ -171,6 +176,23 @@ class HomeViewModel(
                 _errorMessage.value = ex.message ?: "Could not update profile"
             }
             _profileUpdateInProgress.value = false
+        }
+    }
+
+    fun purchaseReward(reward: Reward) {
+        val user = _currentUserProfile.value ?: return
+        if (user.total_points < reward.cost) return
+
+        viewModelScope.launch {
+            try {
+                val userRef = firestore.collection("users").document(user.uid)
+                firestore.runTransaction { transaction ->
+                    transaction.update(userRef, "total_points", FieldValue.increment(-reward.cost))
+                    transaction.update(userRef, "purchased_rewards", FieldValue.arrayUnion(reward.title))
+                }.await()
+            } catch (e: Exception) {
+                _errorMessage.value = "Purchase failed: ${e.message}"
+            }
         }
     }
 

@@ -13,15 +13,19 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.ulpgc.kippo.model.Task
+import es.ulpgc.kippo.model.Reward
 
 @Composable
 fun ProfileSection(
@@ -31,6 +35,7 @@ fun ProfileSection(
     points: Long,
     profileIconKey: String,
     completedTasks: List<Task> = emptyList(),
+    purchasedRewards: List<String> = emptyList(),
     onEditProfile: () -> Unit,
     onSignOut: () -> Unit
 ) {
@@ -39,6 +44,7 @@ fun ProfileSection(
     if (showPointsHistory) {
         PointsHistoryDialog(
             tasks = completedTasks,
+            purchasedRewards = purchasedRewards,
             onDismiss = { showPointsHistory = false }
         )
     }
@@ -137,6 +143,39 @@ fun ProfileSection(
                     )
                 }
 
+                if (purchasedRewards.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        "Your Rewards",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = KippoColors.DarkText,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    purchasedRewards.forEach { rewardTitle ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = KippoColors.Yellow.copy(alpha = 0.1f)),
+                            border = BorderStroke(1.dp, KippoColors.Yellow)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.CardGiftcard, contentDescription = null, tint = KippoColors.DarkText)
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = rewardTitle,
+                                    fontWeight = FontWeight.Bold,
+                                    color = KippoColors.DarkText
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 OutlinedButton(
@@ -169,6 +208,7 @@ fun ProfileSection(
 @Composable
 fun PointsHistoryDialog(
     tasks: List<Task>,
+    purchasedRewards: List<String> = emptyList(),
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -181,38 +221,32 @@ fun PointsHistoryDialog(
             }
         },
         text = {
-            if (tasks.isEmpty()) {
-                Text("No tasks completed yet.", color = Color.Gray)
+            if (tasks.isEmpty() && purchasedRewards.isEmpty()) {
+                Text("No activity yet.", color = Color.Gray)
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Tareas que suman puntos
                     items(tasks) { task ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = KippoColors.Background.copy(alpha = 0.5f)),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = KippoColors.Teal, modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    text = task.title,
-                                    modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = "+${task.points}",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = KippoColors.DarkTeal
-                                )
-                            }
-                        }
+                        HistoryItem(
+                            title = task.title,
+                            points = "+${task.points}",
+                            color = KippoColors.Teal,
+                            icon = Icons.Default.CheckCircle
+                        )
+                    }
+                    // Compras que restan puntos
+                    items(purchasedRewards) { rewardTitle ->
+                        // Buscamos el coste real del reward por su título
+                        val cost = Reward.SAMPLE_REWARDS.find { it.title == rewardTitle }?.cost ?: 0
+                        HistoryItem(
+                            title = "Reward: $rewardTitle",
+                            points = "-$cost",
+                            color = Color(0xFFE53935),
+                            icon = Icons.Default.RemoveCircle
+                        )
                     }
                 }
             }
@@ -225,6 +259,34 @@ fun PointsHistoryDialog(
         containerColor = Color.White,
         shape = RoundedCornerShape(24.dp)
     )
+}
+
+@Composable
+fun HistoryItem(title: String, points: String, color: Color, icon: ImageVector) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = KippoColors.Background.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = points,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = color
+            )
+        }
+    }
 }
 
 @Composable
