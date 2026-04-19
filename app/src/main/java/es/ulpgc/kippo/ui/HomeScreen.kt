@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import es.ulpgc.kippo.R
+import es.ulpgc.kippo.model.Task
 import es.ulpgc.kippo.model.User
 import es.ulpgc.kippo.viewmodel.HomeViewModel
 import es.ulpgc.kippo.ui.components.BottomNavDestination
@@ -54,11 +55,18 @@ fun HomeScreen(
     errorMessage: String? = null,
     onDismissError: () -> Unit = {},
     onEditProfile: (String, String) -> Unit = { _, _ -> },
+    allTasks: List<Task> = emptyList(), // Recibimos todas las tareas
+    currentUserId: String = "", // Recibimos el ID del usuario actual
     viewModel: HomeViewModel = viewModel()
 ) {
     val household by viewModel.household.collectAsState()
     
     var showEditProfileDialog by remember { mutableStateOf(false) }
+
+    // Filtramos las tareas completadas por el usuario actual para el historial
+    val userCompletedTasks = remember(allTasks, currentUserId) {
+        allTasks.filter { it.completed && it.completedBy == currentUserId }
+    }
 
     if (showEditProfileDialog) {
         EditProfileDialog(
@@ -118,6 +126,7 @@ fun HomeScreen(
                     email = profileEmail,
                     points = profilePoints,
                     profileIconKey = profileIconKey,
+                    completedTasks = userCompletedTasks, // Pasamos las tareas filtradas
                     onEditProfile = { showEditProfileDialog = true },
                     onSignOut = onSignOut
                 )

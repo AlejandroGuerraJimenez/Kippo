@@ -2,25 +2,26 @@ package es.ulpgc.kippo.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import es.ulpgc.kippo.model.Task
 
 @Composable
 fun ProfileSection(
@@ -29,9 +30,19 @@ fun ProfileSection(
     email: String,
     points: Long,
     profileIconKey: String,
+    completedTasks: List<Task> = emptyList(),
     onEditProfile: () -> Unit,
     onSignOut: () -> Unit
 ) {
+    var showPointsHistory by remember { mutableStateOf(false) }
+
+    if (showPointsHistory) {
+        PointsHistoryDialog(
+            tasks = completedTasks,
+            onDismiss = { showPointsHistory = false }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -46,6 +57,7 @@ fun ProfileSection(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
+                    .clickable { showPointsHistory = true }
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -152,6 +164,67 @@ fun ProfileSection(
             }
         }
     }
+}
+
+@Composable
+fun PointsHistoryDialog(
+    tasks: List<Task>,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Stars, contentDescription = null, tint = KippoColors.Yellow, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Points History", fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            if (tasks.isEmpty()) {
+                Text("No tasks completed yet.", color = Color.Gray)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(tasks) { task ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = KippoColors.Background.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = KippoColors.Teal, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = task.title,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "+${task.points}",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = KippoColors.DarkTeal
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CLOSE", color = KippoColors.Teal, fontWeight = FontWeight.Bold)
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(24.dp)
+    )
 }
 
 @Composable

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
 import java.time.ZoneId
+import es.ulpgc.kippo.model.Task
 import es.ulpgc.kippo.ui.*
 import es.ulpgc.kippo.viewmodel.ExpenseViewModel
 import es.ulpgc.kippo.viewmodel.GroceryViewModel
@@ -140,7 +141,9 @@ class MainActivity : ComponentActivity() {
                             onCreateTaskRequested = { showCreatePicker = true },
                             onNavigateToHouseholdProfile = { screenState.value = "household_profile" },
                             pendingTaskDates = pendingTaskDates,
-                            currentSectionState = currentSectionState
+                            currentSectionState = currentSectionState,
+                            allTasks = allTasks,
+                            currentUserId = auth.currentUser?.uid ?: ""
                         )
                         "create_household" -> CreateHouseholdScreen(
                             onHouseholdCreated = { screenState.value = "home_dispatch" }
@@ -217,7 +220,9 @@ fun HomeDispatch(
     onCreateTaskRequested: () -> Unit,
     onNavigateToHouseholdProfile: () -> Unit,
     pendingTaskDates: Set<LocalDate> = emptySet(),
-    currentSectionState: MutableState<es.ulpgc.kippo.ui.components.BottomNavDestination>
+    currentSectionState: MutableState<es.ulpgc.kippo.ui.components.BottomNavDestination>,
+    allTasks: List<Task> = emptyList(),
+    currentUserId: String = ""
 ) {
     val hasHousehold by viewModel.hasHousehold.collectAsState()
     val household by viewModel.household.collectAsState()
@@ -244,6 +249,8 @@ fun HomeDispatch(
             onNavigateToHouseholdProfile = onNavigateToHouseholdProfile,
             pendingTaskDates = pendingTaskDates,
             currentSectionState = currentSectionState,
+            allTasks = allTasks,
+            currentUserId = currentUserId,
             viewModel = viewModel
         )
         false -> SetupHouseholdScreen(
