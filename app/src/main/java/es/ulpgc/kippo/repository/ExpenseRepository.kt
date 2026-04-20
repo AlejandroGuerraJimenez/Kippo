@@ -36,6 +36,15 @@ class ExpenseRepository(
         }
     }
 
+    suspend fun deleteSettlement(householdId: String, settlementId: String): Result<Unit> {
+        return try {
+            settlementCollection(householdId).document(settlementId).delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun observeExpenses(householdId: String): Flow<List<Expense>> = callbackFlow {
         val subscription = expenseCollection(householdId)
             .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -61,6 +70,7 @@ class ExpenseRepository(
 
     fun observeSettlements(householdId: String): Flow<List<Settlement>> = callbackFlow {
         val subscription = settlementCollection(householdId)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)

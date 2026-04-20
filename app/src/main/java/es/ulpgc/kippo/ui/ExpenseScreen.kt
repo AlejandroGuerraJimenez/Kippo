@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import es.ulpgc.kippo.model.Expense
 import es.ulpgc.kippo.model.ExpenseCategory
+import es.ulpgc.kippo.model.Settlement
 import es.ulpgc.kippo.model.User
 import es.ulpgc.kippo.ui.components.PhotoSourceBottomSheet
 import es.ulpgc.kippo.ui.components.BottomNavDestination
@@ -54,9 +55,14 @@ fun ExpenseScreen(
     onAddExpenseClick: () -> Unit,
     viewModel: ExpenseViewModel = viewModel()
 ) {
-    val expenses by viewModel.expenses.collectAsState()
+    val combinedHistory by viewModel.combinedHistory.collectAsState()
     val netBalances by viewModel.netBalances.collectAsState()
     val simplifiedDebts by viewModel.simplifiedDebts.collectAsState()
+    
+    // Analytics flows
+    val totalSpending by viewModel.totalHouseholdSpending.collectAsState()
+    val categoryTotals by viewModel.categoryTotals.collectAsState()
+    val userSpending by viewModel.userSpending.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedExpense by remember { mutableStateOf<Expense?>(null) }
@@ -154,67 +160,433 @@ fun ExpenseScreen(
                         )
                     }
                 )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = {
+                        Text(
+                            "Analytics",
+                            fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedTab == 2) KippoColors.Teal else KippoColors.DarkText.copy(alpha = 0.5f)
+                        )
+                    }
+                )
             }
 
-            if (selectedTab == 0) {
-                if (expenses.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.AccountBalanceWallet,
-                                contentDescription = null,
-                                tint = KippoColors.Teal.copy(alpha = 0.3f),
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                "No expenses yet",
-                                color = KippoColors.DarkText.copy(alpha = 0.4f),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                "Tap + to add one",
-                                color = KippoColors.DarkText.copy(alpha = 0.3f),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+            when (selectedTab) {
+                0 -> {
+                    if (combinedHistory.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.AccountBalanceWallet,
+                                    contentDescription = null,
+                                    tint = KippoColors.Teal.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    "No activity yet",
+                                    color = KippoColors.DarkText.copy(alpha = 0.4f),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(vertical = 16.dp)
+                        ) {
+                            items(combinedHistory) { item ->
+                                when (item) {
+                                    is Expense -> {
+                                        ExpenseItem(
+                                            expense = item,
+                                            members = members,
+                                            currentUserId = currentUserId,
+                                            onClick = { selectedExpense = item }
+                                        )
+                                    }
+                                    is Settlement -> {
+                                        SettlementItem(
+                                            settlement = item,
+                                            members = members,
+                                            currentUserId = currentUserId,
+                                            onDelete = { viewModel.deleteSettlement(item.id) }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
-                } else {
-                    LazyColumn(
+                }
+                1 -> {
+                    BalanceSummaryContent(
+                        netBalances = netBalances,
+                        simplifiedDebts = simplifiedDebts,
+                        members = members,
+                        currentUserId = currentUserId,
+                        onSettleUp = { fromUid, toUid, amount ->
+                            settleUpFromUid = fromUid
+                            settleUpToUid = toUid
+                            settleUpAmount = amount
+                            showSettleUpDialog = true
+                        }
+                    )
+                }
+                2 -> {
+                    AnalyticsContent(
+                        totalSpending = totalSpending,
+                        categoryTotals = categoryTotals,
+                        userSpending = userSpending,
+                        members = members
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettlementItem(
+    settlement: Settlement,
+    members: List<User>,
+    currentUserId: String,
+    onDelete: () -> Unit
+) {
+    val fromUser = members.find { it.uid == settlement.fromUid }?.username ?: "Unknown"
+    val toUser = members.find { it.uid == settlement.toUid }?.username ?: "Unknown"
+    val dateFormat = remember { SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault()) }
+    val isInvolved = currentUserId == settlement.fromUid || currentUserId == settlement.toUid
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9)),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, KippoColors.Teal.copy(alpha = 0.1f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color.White, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.SyncAlt, contentDescription = null, tint = KippoColors.Teal)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (settlement.fromUid == currentUserId) "You paid $toUser" 
+                           else if (settlement.toUid == currentUserId) "$fromUser paid you"
+                           else "$fromUser paid $toUser",
+                    fontWeight = FontWeight.Bold,
+                    color = KippoColors.DarkText,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (settlement.note.isNotBlank()) {
+                    Text(
+                        settlement.note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = KippoColors.DarkText.copy(alpha = 0.6f)
+                    )
+                }
+                settlement.createdAt?.let {
+                    Text(
+                        dateFormat.format(it),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = KippoColors.DarkText.copy(alpha = 0.4f)
+                    )
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "%.2f €".format(settlement.amount),
+                    fontWeight = FontWeight.ExtraBold,
+                    color = KippoColors.Teal,
+                    fontSize = 16.sp
+                )
+                if (settlement.fromUid == currentUserId) {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AnalyticsContent(
+    totalSpending: Double,
+    categoryTotals: Map<String, Double>,
+    userSpending: Map<String, Double>,
+    members: List<User>
+) {
+    if (totalSpending <= 0) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.BarChart,
+                    contentDescription = null,
+                    tint = KippoColors.Teal.copy(alpha = 0.3f),
+                    modifier = Modifier.size(64.dp)
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "No data to analyze",
+                    color = KippoColors.DarkText.copy(alpha = 0.4f),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = KippoColors.Teal),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Total Spending",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "%.2f €".format(totalSpending),
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                    Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(vertical = 16.dp)
+                            .size(60.dp)
+                            .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
-                        items(expenses) { expense ->
-                            ExpenseItem(
-                                expense = expense,
-                                members = members,
-                                currentUserId = currentUserId,
-                                onClick = { selectedExpense = expense }
+                        Icon(Icons.Default.Payments, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+                    }
+                }
+            }
+        }
+
+        item {
+            Text(
+                "Distribution by Category",
+                fontWeight = FontWeight.Bold,
+                color = KippoColors.DarkText,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                SpendingPieChart(
+                    categoryTotals = categoryTotals,
+                    modifier = Modifier.size(140.dp)
+                )
+                
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    categoryTotals.entries.sortedByDescending { it.value }.take(3).forEach { (catKey, amount) ->
+                        val category = ExpenseCategory.fromKey(catKey)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(8.dp).background(KippoColors.Teal, CircleShape))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = category.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = KippoColors.DarkText,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                "%.0f%%".format((amount/totalSpending)*100),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = KippoColors.Teal
                             )
                         }
                     }
                 }
-            } else {
-                BalanceSummaryContent(
-                    netBalances = netBalances,
-                    simplifiedDebts = simplifiedDebts,
-                    members = members,
-                    currentUserId = currentUserId,
-                    onSettleUp = { fromUid, toUid, amount ->
-                        settleUpFromUid = fromUid
-                        settleUpToUid = toUid
-                        settleUpAmount = amount
-                        showSettleUpDialog = true
-                    }
-                )
             }
         }
+
+        item {
+            Text(
+                "Detailed Category Breakdown",
+                fontWeight = FontWeight.Bold,
+                color = KippoColors.DarkText,
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(Modifier.height(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                categoryTotals.entries.sortedByDescending { it.value }.forEach { (catKey, amount) ->
+                    val category = ExpenseCategory.fromKey(catKey)
+                    CategoryProgressRow(category, amount, totalSpending)
+                }
+            }
+        }
+
+        item {
+            Text(
+                "Spending by Member",
+                fontWeight = FontWeight.Bold,
+                color = KippoColors.DarkText,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(Modifier.height(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                userSpending.entries.sortedByDescending { it.value }.forEach { (uid, amount) ->
+                    val member = members.find { it.uid == uid }
+                    MemberSpendingRow(member?.username ?: "Unknown", amount, totalSpending)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SpendingPieChart(
+    categoryTotals: Map<String, Double>,
+    modifier: Modifier = Modifier
+) {
+    val total = categoryTotals.values.sum()
+    if (total <= 0) return
+
+    val categories = categoryTotals.entries.toList()
+    val colors = listOf(
+        KippoColors.Teal,
+        Color(0xFFFFB74D),
+        Color(0xFF81C784),
+        Color(0xFF64B5F6),
+        Color(0xFFBA68C8)
+    )
+
+    androidx.compose.foundation.Canvas(modifier = modifier) {
+        var startAngle = -90f
+        categories.forEachIndexed { index, entry ->
+            val sweepAngle = (entry.value / total).toFloat() * 360f
+            drawArc(
+                color = colors[index % colors.size],
+                startAngle = startAngle,
+                sweepAngle = sweepAngle,
+                useCenter = false,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = 12.dp.toPx(),
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+            )
+            startAngle += sweepAngle
+        }
+    }
+}
+
+@Composable
+fun CategoryProgressRow(category: ExpenseCategory, amount: Double, total: Double) {
+    val progress = if (total > 0) (amount / total).toFloat() else 0f
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = categoryIcon(category),
+                    contentDescription = null,
+                    tint = KippoColors.Teal,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    category.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = KippoColors.DarkText
+                )
+            }
+            Text(
+                "%.2f € (%.0f%%)".format(amount, progress * 100),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodySmall,
+                color = KippoColors.Teal
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(10.dp),
+            color = KippoColors.Teal,
+            trackColor = KippoColors.Teal.copy(alpha = 0.1f),
+            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
+    }
+}
+
+@Composable
+fun MemberSpendingRow(username: String, amount: Double, total: Double) {
+    val progress = if (total > 0) (amount / total).toFloat() else 0f
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                username,
+                style = MaterialTheme.typography.bodyMedium,
+                color = KippoColors.DarkText
+            )
+            Text(
+                "%.2f €".format(amount),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodySmall,
+                color = KippoColors.DarkTeal
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(10.dp),
+            color = KippoColors.DarkTeal,
+            trackColor = KippoColors.DarkTeal.copy(alpha = 0.1f),
+            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
     }
 }
 
@@ -408,8 +780,7 @@ fun BalanceMemberRow(member: User, balance: Double) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
                     .size(40.dp)

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Date
 import kotlin.math.abs
 
 class ExpenseViewModel(
@@ -24,11 +25,53 @@ class ExpenseViewModel(
     val expenses: StateFlow<List<Expense>> = _expenses
 
     private val _settlements = MutableStateFlow<List<Settlement>>(emptyList())
+    val settlements: StateFlow<List<Settlement>> = _settlements
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
     private var currentHouseholdId: String = ""
+
+    // Combined history (Expenses and Settlements) sorted by date
+    val combinedHistory: StateFlow<List<Any>> = combine(_expenses, _settlements) { expenses, settlements ->
+        val combined = (expenses + settlements).sortedWith(compareByDescending { item ->
+            when (item) {
+                is Expense -> item.createdAt ?: Date(0)
+                is Settlement -> item.createdAt ?: Date(0)
+                else -> Date(0)
+            }
+        })
+        combined
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Analytics: Total spending
+    val totalHouseholdSpending: StateFlow<Double> = _expenses.map { expenses ->
+        expenses.sumOf { it.amount }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // Analytics: Spending by category
+    val categoryTotals: StateFlow<Map<String, Double>> = _expenses.map { expenses ->
+        expenses.groupBy { it.category }
+            .mapValues { (_, list) -> list.sumOf { it.amount } }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    // Analytics: Spending by member (how much each member actually consumed)
+    val userSpending: StateFlow<Map<String, Double>> = _expenses.map { expenses ->
+        val spendingByMember = mutableMapOf<String, Double>()
+        expenses.forEach { expense ->
+            if (expense.customSplits.isNotEmpty()) {
+                expense.customSplits.forEach { (uid, amount) ->
+                    spendingByMember[uid] = (spendingByMember[uid] ?: 0.0) + amount
+                }
+            } else if (expense.splitAmong.isNotEmpty()) {
+                val share = expense.amount / expense.splitAmong.size
+                expense.splitAmong.forEach { uid ->
+                    spendingByMember[uid] = (spendingByMember[uid] ?: 0.0) + share
+                }
+            }
+        }
+        spendingByMember
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     // uid -> net balance (positive = owed money, negative = owes money)
     val netBalances: StateFlow<Map<String, Double>> = combine(_expenses, _settlements) { expenses, settlements ->
@@ -87,6 +130,15 @@ class ExpenseViewModel(
         viewModelScope.launch {
             expenseRepository.deleteExpense(currentHouseholdId, expenseId).onFailure {
                 _errorMessage.value = "Error deleting expense"
+            }
+        }
+    }
+
+    fun deleteSettlement(settlementId: String) {
+        if (currentHouseholdId.isBlank()) return
+        viewModelScope.launch {
+            expenseRepository.deleteSettlement(currentHouseholdId, settlementId).onFailure {
+                _errorMessage.value = "Error deleting payment"
             }
         }
     }
