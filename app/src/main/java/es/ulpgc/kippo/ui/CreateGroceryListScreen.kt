@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import es.ulpgc.kippo.ui.components.KippoScaffold
 import es.ulpgc.kippo.viewmodel.GroceryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +33,7 @@ fun CreateGroceryListScreen(
     var itemText by remember { mutableStateOf("") }
     val items = remember { mutableStateListOf<String>() }
 
-    Scaffold(
+    KippoScaffold(
         topBar = {
             TopAppBar(
                 title = { Text("New Grocery List", fontWeight = FontWeight.Bold) },
@@ -46,8 +47,7 @@ fun CreateGroceryListScreen(
                     titleContentColor = KippoColors.DarkText
                 )
             )
-        },
-        containerColor = KippoColors.Background
+        }
     ) { padding ->
         Column(
             modifier = Modifier

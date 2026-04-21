@@ -38,6 +38,7 @@ import es.ulpgc.kippo.model.User
 import es.ulpgc.kippo.ui.components.PhotoSourceBottomSheet
 import es.ulpgc.kippo.ui.components.BottomNavDestination
 import es.ulpgc.kippo.ui.components.KippoBottomBar
+import es.ulpgc.kippo.ui.components.KippoScaffold
 import es.ulpgc.kippo.util.ImageUtils
 import es.ulpgc.kippo.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
@@ -102,7 +103,7 @@ fun ExpenseScreen(
         )
     }
 
-    Scaffold(
+    KippoScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 navigationIcon = {
@@ -125,8 +126,7 @@ fun ExpenseScreen(
                 onGastosClick = {},
                 onProfileClick = onNavigateToProfile
             )
-        },
-        containerColor = KippoColors.Background
+        }
     ) { padding ->
         Column(
             modifier = Modifier

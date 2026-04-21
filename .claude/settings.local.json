@@ -12,7 +12,10 @@
       "Read(//c/Program Files/**)",
       "Bash(where java *)",
       "Bash(export JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\")",
-      "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\")"
+      "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\")",
+      "Bash(./gradlew :app:compileDebugKotlin -q)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }

@@ -18,7 +18,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -31,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import es.ulpgc.kippo.ui.components.KippoScaffold
 import es.ulpgc.kippo.viewmodel.CreateHouseholdViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,7 +48,7 @@ fun CreateHouseholdScreen(
         }
     }
 
-    Scaffold(
+    KippoScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Create Household", fontWeight = FontWeight.Bold) },
@@ -56,8 +56,7 @@ fun CreateHouseholdScreen(
                     containerColor = KippoColors.Background
                 )
             )
-        },
-        containerColor = KippoColors.Background
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier

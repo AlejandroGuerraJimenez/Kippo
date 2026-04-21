@@ -30,6 +30,7 @@ import es.ulpgc.kippo.model.Reward
 import es.ulpgc.kippo.viewmodel.HomeViewModel
 import es.ulpgc.kippo.ui.components.BottomNavDestination
 import es.ulpgc.kippo.ui.components.KippoBottomBar
+import es.ulpgc.kippo.ui.components.KippoScaffold
 import es.ulpgc.kippo.util.ImageUtils
 import java.time.LocalDate
 import java.time.YearMonth
@@ -86,7 +87,7 @@ fun HomeScreen(
             }
         )
     }
-    Scaffold(
+    KippoScaffold(
             topBar = {
                 KippoTopBar(
                     householdName = household?.name ?: "Kippo",
@@ -103,8 +104,7 @@ fun HomeScreen(
                     onGastosClick = onNavigateToGastos,
                     onProfileClick = { currentSectionState.value = es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE }
                 )
-            },
-            containerColor = KippoColors.Background
+            }
         ) { padding ->
         Column(
             modifier = Modifier
@@ -226,7 +226,8 @@ fun CreatePickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Color.White,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        contentWindowInsets = { WindowInsets.navigationBars }
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 36.dp),
@@ -308,7 +309,15 @@ fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
 
 @Composable
 fun KippoTopBar(householdName: String, householdImageBase64: String? = null, onProfileClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(
+                WindowInsets.statusBars.union(WindowInsets.displayCutout)
+            )
+            .padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Surface(shape = CircleShape, color = Color.White, modifier = Modifier.size(52.dp).clickable { onProfileClick() }, shadowElevation = 2.dp) {
             Box(contentAlignment = Alignment.Center) {
                 val hb = remember(householdImageBase64) { ImageUtils.decodeToImageBitmapOrNull(householdImageBase64) }

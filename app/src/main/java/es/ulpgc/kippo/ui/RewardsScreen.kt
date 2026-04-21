@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.ulpgc.kippo.model.Reward
+import es.ulpgc.kippo.ui.components.KippoScaffold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +45,7 @@ fun RewardsScreen(
         )
     }
 
-    Scaffold(
+    KippoScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Kippo Rewards", fontWeight = FontWeight.Bold) },
@@ -57,8 +58,7 @@ fun RewardsScreen(
                     containerColor = KippoColors.Background
                 )
             )
-        },
-        containerColor = KippoColors.Background
+        }
     ) { padding ->
         Column(
             modifier = Modifier

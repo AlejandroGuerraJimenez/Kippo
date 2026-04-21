@@ -3,6 +3,7 @@ package es.ulpgc.kippo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -10,6 +11,7 @@ import androidx.compose.runtime.*
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import es.ulpgc.kippo.ui.theme.KippoTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -27,8 +29,9 @@ import es.ulpgc.kippo.viewmodel.TaskViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            KippoTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

@@ -25,6 +25,7 @@ import es.ulpgc.kippo.model.GroceryList
 import es.ulpgc.kippo.viewmodel.GroceryViewModel
 import es.ulpgc.kippo.ui.components.BottomNavDestination
 import es.ulpgc.kippo.ui.components.KippoBottomBar
+import es.ulpgc.kippo.ui.components.KippoScaffold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +46,7 @@ fun GroceryListScreen(
         viewModel.observeGroceryLists(householdId)
     }
 
-    Scaffold(
+    KippoScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Grocery Lists", fontWeight = FontWeight.ExtraBold) },
@@ -68,8 +69,7 @@ fun GroceryListScreen(
                 onGastosClick = onNavigateToGastos,
                 onProfileClick = onNavigateProfile
             )
-        },
-        containerColor = KippoColors.Background
+        }
     ) { padding ->
         if (groceryLists.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {

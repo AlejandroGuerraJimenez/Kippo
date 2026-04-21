@@ -29,6 +29,7 @@ import es.ulpgc.kippo.model.Task
 import es.ulpgc.kippo.model.User
 import es.ulpgc.kippo.ui.components.BottomNavDestination
 import es.ulpgc.kippo.ui.components.KippoBottomBar
+import es.ulpgc.kippo.ui.components.KippoScaffold
 import es.ulpgc.kippo.viewmodel.TaskViewModel
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
@@ -94,7 +95,7 @@ fun TasksScreen(
         )
     }
 
-    Scaffold(
+    KippoScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Household Tasks", fontWeight = FontWeight.Bold) },
@@ -117,8 +118,7 @@ fun TasksScreen(
                 onGastosClick = onNavigateToExpenses,
                 onProfileClick = onNavigateProfile
             )
-        },
-        containerColor = KippoColors.Background
+        }
     ) { padding ->
         Column(
             modifier = Modifier

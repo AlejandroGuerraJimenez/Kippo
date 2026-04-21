@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import es.ulpgc.kippo.model.Household
 import es.ulpgc.kippo.model.User
+import es.ulpgc.kippo.ui.components.KippoScaffold
 import es.ulpgc.kippo.ui.components.PhotoSourceBottomSheet
 import es.ulpgc.kippo.util.ImageUtils
 
@@ -128,7 +129,7 @@ fun HouseholdProfileScreen(
         )
     }
 
-    Scaffold(
+    KippoScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Household Profile", fontWeight = FontWeight.Bold) },
@@ -141,8 +142,7 @@ fun HouseholdProfileScreen(
                     containerColor = KippoColors.Background
                 )
             )
-        },
-        containerColor = KippoColors.Background
+        }
     ) { padding ->
         Column(
             modifier = Modifier

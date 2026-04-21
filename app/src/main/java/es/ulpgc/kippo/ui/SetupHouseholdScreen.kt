@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import es.ulpgc.kippo.ui.components.KippoScaffold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,7 +22,7 @@ fun SetupHouseholdScreen(
     onJoinHouseholdClick: () -> Unit,
     onSignOut: () -> Unit
 ) {
-    Scaffold(
+    KippoScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Welcome to Kippo", fontWeight = FontWeight.Bold) },
@@ -29,8 +30,7 @@ fun SetupHouseholdScreen(
                     containerColor = KippoColors.Background
                 )
             )
-        },
-        containerColor = KippoColors.Background
+        }
     ) { padding ->
         Column(
             modifier = Modifier

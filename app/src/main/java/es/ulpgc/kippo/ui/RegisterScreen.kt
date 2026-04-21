@@ -1,7 +1,6 @@
 package es.ulpgc.kippo.ui
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import es.ulpgc.kippo.R
+import es.ulpgc.kippo.ui.components.KippoScaffold
 import es.ulpgc.kippo.viewmodel.RegisterViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,10 +48,12 @@ fun RegisterScreen(
         unfocusedTextColor = KippoColors.DarkText
     )
 
+    KippoScaffold { padding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(KippoColors.Background)
+            .padding(padding)
+            .imePadding()
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -246,5 +248,6 @@ fun RegisterScreen(
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
     }
 }
