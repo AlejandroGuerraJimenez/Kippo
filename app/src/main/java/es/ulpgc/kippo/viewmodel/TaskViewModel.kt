@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import es.ulpgc.kippo.model.Task
 import es.ulpgc.kippo.repository.TaskRepository
+import es.ulpgc.kippo.ui.components.toast.ToastManager
+import es.ulpgc.kippo.util.RealtimeDiffer
+import es.ulpgc.kippo.util.UserDirectory
 import java.util.Date
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,12 +34,33 @@ class TaskViewModel(
             initialValue = emptyList()
         )
 
+    private val taskDiffer = RealtimeDiffer<Task> { it.id }
+
     fun observeTasks(householdId: String) {
         if (householdId.isBlank()) return
         currentHouseholdId = householdId
         viewModelScope.launch {
-            taskRepository.observeTasks(householdId).collect {
-                _tasks.value = it
+            taskRepository.observeTasks(householdId).collect { list ->
+                _tasks.value = list
+                val me = auth.currentUser?.uid
+                taskDiffer.diff(
+                    newList = list,
+                    onAdded = { t ->
+                        val assigned = t.assignedTo
+                        if (assigned == me && me != null) {
+                            ToastManager.showRealtime("New task assigned to you: ${t.title}")
+                        }
+                    },
+                    onUpdated = { prev, curr ->
+                        if (!prev.completed && curr.completed) {
+                            val by = curr.completedBy
+                            if (by != null && by != me) {
+                                val who = UserDirectory.name(by)
+                                ToastManager.showRealtime("$who completed: ${curr.title}")
+                            }
+                        }
+                    }
+                )
             }
         }
     }
@@ -56,17 +80,24 @@ class TaskViewModel(
         )
         viewModelScope.launch {
             taskRepository.createTask(newTask)
+                .onSuccess { ToastManager.showSuccess("Task created") }
+                .onFailure { ToastManager.showError("Error creating task") }
         }
     }
 
     fun toggleTask(taskId: String, completed: Boolean) {
         val userId = auth.currentUser?.uid ?: return
         if (currentHouseholdId.isBlank()) return
-        
+
         val task = _tasks.value.find { it.id == taskId } ?: return
-        
+
         viewModelScope.launch {
             taskRepository.toggleTaskCompletion(currentHouseholdId, task, completed, userId)
+                .onSuccess {
+                    if (completed) ToastManager.showSuccess("Task completed +${task.points} pts")
+                    else ToastManager.showInfo("Task reopened")
+                }
+                .onFailure { ToastManager.showError("Error updating task") }
         }
     }
 
@@ -74,6 +105,8 @@ class TaskViewModel(
         if (currentHouseholdId.isBlank()) return
         viewModelScope.launch {
             taskRepository.deleteTask(currentHouseholdId, taskId)
+                .onSuccess { ToastManager.showSuccess("Task deleted") }
+                .onFailure { ToastManager.showError("Error deleting task") }
         }
     }
 
@@ -89,6 +122,8 @@ class TaskViewModel(
         )
         viewModelScope.launch {
             taskRepository.updateTask(currentHouseholdId, taskId, updates)
+                .onSuccess { ToastManager.showSuccess("Task updated") }
+                .onFailure { ToastManager.showError("Error updating task") }
         }
     }
 }

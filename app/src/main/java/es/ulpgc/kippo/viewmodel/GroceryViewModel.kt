@@ -2,15 +2,22 @@ package es.ulpgc.kippo.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import es.ulpgc.kippo.model.GroceryItem
 import es.ulpgc.kippo.model.GroceryList
+import es.ulpgc.kippo.ui.components.toast.ToastManager
+import es.ulpgc.kippo.util.RealtimeDiffer
+import es.ulpgc.kippo.util.UserDirectory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class GroceryViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
+    private val listDiffer = RealtimeDiffer<GroceryList> { it.id }
+    private val itemDiffers: MutableMap<String, RealtimeDiffer<GroceryItem>> = mutableMapOf()
 
     private val _groceryLists = MutableStateFlow<List<GroceryList>>(emptyList())
     val groceryLists: StateFlow<List<GroceryList>> = _groceryLists
@@ -33,13 +40,27 @@ class GroceryViewModel : ViewModel() {
                 val lists = snapshot?.toObjects(GroceryList::class.java) ?: emptyList()
                 Log.d("GroceryViewModel", "Found ${lists.size} lists")
                 _groceryLists.value = lists
+                val me = auth.currentUser?.uid
+                listDiffer.diff(
+                    newList = lists,
+                    onAdded = { l ->
+                        if (l.createdBy.isNotBlank() && l.createdBy != me) {
+                            val who = UserDirectory.name(l.createdBy)
+                            ToastManager.showRealtime("$who created list: ${l.name}")
+                        }
+                    }
+                )
                 lists.forEach { list ->
-                    observeItems(list.id)
+                    observeItems(list.id, list.name)
                 }
             }
     }
 
-    private fun observeItems(listId: String) {
+    private fun observeItems(listId: String, listName: String) {
+        if (itemDiffers.containsKey(listId)) {
+            // Already observing; listener may be duplicated on re-emits, but avoid duplicate differ state.
+        }
+        val differ = itemDiffers.getOrPut(listId) { RealtimeDiffer { it.id } }
         db.collection("groceryLists").document(listId).collection("items")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
@@ -47,6 +68,22 @@ class GroceryViewModel : ViewModel() {
                 val currentMap = _items.value.toMutableMap()
                 currentMap[listId] = itemList
                 _items.value = currentMap
+
+                val me = auth.currentUser?.uid
+                differ.diff(
+                    newList = itemList,
+                    onAdded = { it2 ->
+                        if (it2.addedBy.isNotBlank() && it2.addedBy != me) {
+                            val who = UserDirectory.name(it2.addedBy)
+                            ToastManager.showRealtime("$who added \"${it2.name}\" to $listName")
+                        }
+                    },
+                    onUpdated = { prev, curr ->
+                        if (!prev.checked && curr.checked) {
+                            ToastManager.showRealtime("\"${curr.name}\" checked in $listName")
+                        }
+                    }
+                )
             }
     }
 
@@ -69,9 +106,11 @@ class GroceryViewModel : ViewModel() {
                 initialItems.filter { it.isNotBlank() }.forEach { itemName ->
                     addItemToList(docRef.id, itemName, createdBy)
                 }
+                ToastManager.showSuccess("List \"$name\" created")
             }
             .addOnFailureListener { e ->
                 Log.e("GroceryViewModel", "Error adding list", e)
+                ToastManager.showError("Error creating list")
             }
     }
 
@@ -91,5 +130,7 @@ class GroceryViewModel : ViewModel() {
 
     fun deleteList(listId: String) {
         db.collection("groceryLists").document(listId).delete()
+            .addOnSuccessListener { ToastManager.showSuccess("List deleted") }
+            .addOnFailureListener { ToastManager.showError("Error deleting list") }
     }
 }

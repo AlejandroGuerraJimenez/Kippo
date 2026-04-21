@@ -18,6 +18,7 @@ import java.time.ZoneId
 import es.ulpgc.kippo.model.Task
 import es.ulpgc.kippo.model.Reward
 import es.ulpgc.kippo.ui.*
+import es.ulpgc.kippo.ui.components.toast.ToastHost
 import es.ulpgc.kippo.viewmodel.ExpenseViewModel
 import es.ulpgc.kippo.viewmodel.GroceryViewModel
 import es.ulpgc.kippo.viewmodel.HomeViewModel
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                 Box(modifier = Modifier.fillMaxSize()) {
                     val auth = FirebaseAuth.getInstance()
                     val initial = if (auth.currentUser != null) "home_dispatch" else "register"
                     val screenState = remember { mutableStateOf(initial) }
@@ -217,6 +219,9 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+
+                    ToastHost(modifier = Modifier.align(Alignment.TopCenter))
+                 }
                 }
             }
         }

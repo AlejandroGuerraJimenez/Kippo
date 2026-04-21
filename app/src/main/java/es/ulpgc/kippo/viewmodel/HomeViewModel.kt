@@ -10,6 +10,9 @@ import es.ulpgc.kippo.model.User
 import es.ulpgc.kippo.model.Reward
 import es.ulpgc.kippo.repository.HouseholdRepository
 import es.ulpgc.kippo.repository.UserRepository
+import es.ulpgc.kippo.ui.components.toast.ToastManager
+import es.ulpgc.kippo.util.RealtimeDiffer
+import es.ulpgc.kippo.util.UserDirectory
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -47,6 +50,8 @@ class HomeViewModel(
     val profileUpdateInProgress = _profileUpdateInProgress.asStateFlow()
 
     private var currentHouseholdId: String? = null
+    private var householdListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private val memberDiffer = RealtimeDiffer<User> { it.uid }
 
     init {
         observeUserHousehold()
@@ -65,10 +70,13 @@ class HomeViewModel(
                 val newHouseholdId = user?.current_household_id
                 
                 if (newHouseholdId != currentHouseholdId) {
+                    householdListener?.remove()
+                    householdListener = null
+                    memberDiffer.reset()
                     currentHouseholdId = newHouseholdId
                     if (!newHouseholdId.isNullOrBlank()) {
                         observeCustomRewards(newHouseholdId)
-                        refreshHouseholdData()
+                        observeHouseholdLive(newHouseholdId)
                     } else {
                         _customRewards.value = emptyList()
                         _household.value = null
@@ -91,14 +99,26 @@ class HomeViewModel(
             }
     }
 
+    private fun observeHouseholdLive(householdId: String) {
+        householdListener = firestore.collection("household").document(householdId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
+                val h = snapshot.toObject(Household::class.java)
+                if (h != null) {
+                    _household.value = h
+                    fetchMembers(h.members)
+                }
+            }
+    }
+
     private fun refreshHouseholdData() {
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
             val householdResult = householdRepository.getUserHousehold(uid)
             val householdData = householdResult.getOrNull()
             _household.value = householdData
-            
-            householdData?.let { 
+
+            householdData?.let {
                 fetchMembers(it.members)
             }
         }
@@ -109,10 +129,26 @@ class HomeViewModel(
             val result = userRepository.getUsers(uids)
             result.onSuccess { userList ->
                 _members.value = userList
+                UserDirectory.update(userList)
+                val me = auth.currentUser?.uid
+                memberDiffer.diff(
+                    newList = userList,
+                    onAdded = { u ->
+                        if (u.uid != me) {
+                            val name = u.name.ifBlank { u.username.ifBlank { "A new member" } }
+                            ToastManager.showRealtime("$name joined the household")
+                        }
+                    }
+                )
             }.onFailure {
                 _members.value = emptyList()
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        householdListener?.remove()
     }
 
     fun createCustomReward(title: String, description: String, cost: Long) {
@@ -128,15 +164,20 @@ class HomeViewModel(
             try {
                 firestore.collection("household").document(hid).collection("rewards")
                     .add(newReward).await()
+                ToastManager.showSuccess("Reward created")
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to create reward: ${e.message}"
+                ToastManager.showError("Failed to create reward")
             }
         }
     }
 
     fun purchaseReward(reward: Reward) {
         val user = _currentUserProfile.value ?: return
-        if (user.total_points < reward.cost) return
+        if (user.total_points < reward.cost) {
+            ToastManager.showError("Not enough points")
+            return
+        }
 
         viewModelScope.launch {
             try {
@@ -145,8 +186,10 @@ class HomeViewModel(
                     transaction.update(userRef, "total_points", FieldValue.increment(-reward.cost))
                     transaction.update(userRef, "purchased_rewards", FieldValue.arrayUnion(reward.title))
                 }.await()
+                ToastManager.showSuccess("Reward redeemed: ${reward.title}")
             } catch (e: Exception) {
                 _errorMessage.value = "Purchase failed: ${e.message}"
+                ToastManager.showError("Purchase failed")
             }
         }
     }
@@ -156,8 +199,10 @@ class HomeViewModel(
         viewModelScope.launch {
             _profileUpdateInProgress.value = true
             val avatar = profileIconBase64 ?: _currentUserProfile.value?.profileicon ?: "placeholder_avatar"
-            userRepository.updateUserProfile(uid, name, username, avatar)
+            val result = userRepository.updateUserProfile(uid, name, username, avatar)
             _profileUpdateInProgress.value = false
+            result.onSuccess { ToastManager.showSuccess("Profile updated") }
+                .onFailure { ToastManager.showError("Error updating profile") }
         }
     }
 
@@ -165,6 +210,8 @@ class HomeViewModel(
         val hid = currentHouseholdId ?: return
         viewModelScope.launch {
             householdRepository.updateHouseholdName(hid, newName)
+                .onSuccess { ToastManager.showSuccess("Household name updated") }
+                .onFailure { ToastManager.showError("Error updating name") }
             refreshHouseholdData()
         }
     }
@@ -173,6 +220,8 @@ class HomeViewModel(
         val hid = currentHouseholdId ?: return
         viewModelScope.launch {
             householdRepository.updateHouseholdImage(hid, imageBase64)
+                .onSuccess { ToastManager.showSuccess("Household image updated") }
+                .onFailure { ToastManager.showError("Error updating image") }
             refreshHouseholdData()
         }
     }
@@ -181,6 +230,8 @@ class HomeViewModel(
         val hid = currentHouseholdId ?: return
         viewModelScope.launch {
             householdRepository.removeMember(hid, userId)
+                .onSuccess { ToastManager.showSuccess("Member removed") }
+                .onFailure { ToastManager.showError("Error removing member") }
             refreshHouseholdData()
         }
     }
@@ -190,6 +241,8 @@ class HomeViewModel(
         val hid = currentHouseholdId ?: return
         viewModelScope.launch {
             householdRepository.leaveHousehold(uid, hid)
+                .onSuccess { ToastManager.showInfo("You left the household") }
+                .onFailure { ToastManager.showError("Error leaving household") }
         }
     }
 

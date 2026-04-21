@@ -137,15 +137,6 @@ fun HomeScreen(
                 )
             }
 
-            if (!errorMessage.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.clickable { onDismissError() }
-                )
-            }
             Spacer(modifier = Modifier.weight(1f))
         }
     }

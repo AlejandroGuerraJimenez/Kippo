@@ -6,6 +6,9 @@ import com.google.firebase.auth.FirebaseAuth
 import es.ulpgc.kippo.model.Expense
 import es.ulpgc.kippo.model.Settlement
 import es.ulpgc.kippo.repository.ExpenseRepository
+import es.ulpgc.kippo.ui.components.toast.ToastManager
+import es.ulpgc.kippo.util.RealtimeDiffer
+import es.ulpgc.kippo.util.UserDirectory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -83,14 +86,42 @@ class ExpenseViewModel(
         computeSimplifiedDebts(balances)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val expenseDiffer = RealtimeDiffer<Expense> { it.id }
+    private val settlementDiffer = RealtimeDiffer<Settlement> { it.id }
+
     fun observeExpenses(householdId: String) {
         if (householdId.isBlank()) return
         currentHouseholdId = householdId
         viewModelScope.launch {
-            expenseRepository.observeExpenses(householdId).collect { _expenses.value = it }
+            expenseRepository.observeExpenses(householdId).collect { list ->
+                _expenses.value = list
+                val me = auth.currentUser?.uid
+                expenseDiffer.diff(
+                    newList = list,
+                    onAdded = { exp ->
+                        if (exp.createdBy.isNotBlank() && exp.createdBy != me) {
+                            val who = UserDirectory.name(exp.createdBy)
+                            ToastManager.showRealtime("$who added expense: ${exp.title} · %.2f€".format(exp.amount))
+                        }
+                    }
+                )
+            }
         }
         viewModelScope.launch {
-            expenseRepository.observeSettlements(householdId).collect { _settlements.value = it }
+            expenseRepository.observeSettlements(householdId).collect { list ->
+                _settlements.value = list
+                val me = auth.currentUser?.uid
+                settlementDiffer.diff(
+                    newList = list,
+                    onAdded = { s ->
+                        if (s.fromUid.isNotBlank() && s.fromUid != me) {
+                            val from = UserDirectory.name(s.fromUid)
+                            val to = UserDirectory.name(s.toUid)
+                            ToastManager.showRealtime("$from paid $to %.2f€".format(s.amount))
+                        }
+                    }
+                )
+            }
         }
     }
 
@@ -119,27 +150,36 @@ class ExpenseViewModel(
             receiptImageBase64 = receiptImageBase64
         )
         viewModelScope.launch {
-            expenseRepository.addExpense(expense).onFailure {
-                _errorMessage.value = "Error adding expense"
-            }
+            expenseRepository.addExpense(expense)
+                .onSuccess { ToastManager.showSuccess("Expense added") }
+                .onFailure {
+                    _errorMessage.value = "Error adding expense"
+                    ToastManager.showError("Error adding expense")
+                }
         }
     }
 
     fun deleteExpense(expenseId: String) {
         if (currentHouseholdId.isBlank()) return
         viewModelScope.launch {
-            expenseRepository.deleteExpense(currentHouseholdId, expenseId).onFailure {
-                _errorMessage.value = "Error deleting expense"
-            }
+            expenseRepository.deleteExpense(currentHouseholdId, expenseId)
+                .onSuccess { ToastManager.showSuccess("Expense deleted") }
+                .onFailure {
+                    _errorMessage.value = "Error deleting expense"
+                    ToastManager.showError("Error deleting expense")
+                }
         }
     }
 
     fun deleteSettlement(settlementId: String) {
         if (currentHouseholdId.isBlank()) return
         viewModelScope.launch {
-            expenseRepository.deleteSettlement(currentHouseholdId, settlementId).onFailure {
-                _errorMessage.value = "Error deleting payment"
-            }
+            expenseRepository.deleteSettlement(currentHouseholdId, settlementId)
+                .onSuccess { ToastManager.showSuccess("Payment deleted") }
+                .onFailure {
+                    _errorMessage.value = "Error deleting payment"
+                    ToastManager.showError("Error deleting payment")
+                }
         }
     }
 
@@ -153,9 +193,12 @@ class ExpenseViewModel(
             note = note
         )
         viewModelScope.launch {
-            expenseRepository.addSettlement(settlement).onFailure {
-                _errorMessage.value = "Error recording payment"
-            }
+            expenseRepository.addSettlement(settlement)
+                .onSuccess { ToastManager.showSuccess("Payment recorded") }
+                .onFailure {
+                    _errorMessage.value = "Error recording payment"
+                    ToastManager.showError("Error recording payment")
+                }
         }
     }
 
