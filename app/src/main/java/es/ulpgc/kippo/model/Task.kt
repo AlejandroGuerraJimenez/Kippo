@@ -16,5 +16,6 @@ data class Task(
     val completedAt: Date? = null,
     val completedBy: String? = null,
     val recurrence: String = "none", // "none" | "daily" | "weekly" | "biweekly" | "monthly"
-    val dueDate: Date? = null
+    val dueDate: Date? = null,
+    val timeSpentMinutes: Int? = null
 )

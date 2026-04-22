@@ -36,7 +36,13 @@ class TaskRepository(
         awaitClose { subscription.remove() }
     }
 
-    suspend fun toggleTaskCompletion(householdId: String, task: Task, completed: Boolean, userId: String): Result<Unit> {
+    suspend fun toggleTaskCompletion(
+        householdId: String, 
+        task: Task, 
+        completed: Boolean, 
+        userId: String,
+        timeSpent: Int? = null
+    ): Result<Unit> {
         return try {
             val taskRef = getTaskCollection(householdId).document(task.id)
             val userRef = firestore.collection("users").document(userId)
@@ -46,7 +52,8 @@ class TaskRepository(
                 val taskUpdates = mutableMapOf<String, Any?>(
                     "completed" to completed,
                     "completedAt" to if (completed) com.google.firebase.Timestamp.now() else null,
-                    "completedBy" to if (completed) userId else null
+                    "completedBy" to if (completed) userId else null,
+                    "timeSpentMinutes" to if (completed) timeSpent else null
                 )
                 transaction.update(taskRef, taskUpdates)
 

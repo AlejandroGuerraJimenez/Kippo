@@ -62,6 +62,7 @@ fun TasksScreen(
     val tasks by viewModel.tasks.collectAsState()
     var selectedTask by remember { mutableStateOf<Task?>(null) }
     var taskToEdit by remember { mutableStateOf<Task?>(null) }
+    var taskToComplete by remember { mutableStateOf<Task?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(householdId) {
@@ -91,6 +92,17 @@ fun TasksScreen(
             onDismiss = { taskToEdit = null },
             onUpdate = { title, desc, pts, assignedTo, recurrence, dueDate ->
                 viewModel.updateTask(taskToEdit!!.id, title, desc, pts, assignedTo, recurrence, dueDate)
+            }
+        )
+    }
+
+    if (taskToComplete != null) {
+        CompleteTaskDialog(
+            task = taskToComplete!!,
+            onDismiss = { taskToComplete = null },
+            onConfirm = { timeSpent ->
+                viewModel.toggleTask(taskToComplete!!.id, true, timeSpent)
+                taskToComplete = null
             }
         )
     }
@@ -171,7 +183,13 @@ fun TasksScreen(
                             TaskItem(
                                 task = task,
                                 members = members,
-                                onToggle = { viewModel.toggleTask(task.id, !task.completed) },
+                                onToggle = {
+                                    if (task.completed) {
+                                        viewModel.toggleTask(task.id, false)
+                                    } else {
+                                        taskToComplete = task
+                                    }
+                                },
                                 onClick = { selectedTask = task }
                             )
                         }
@@ -181,7 +199,13 @@ fun TasksScreen(
                 WeeklyTaskView(
                     tasks = tasks,
                     members = members,
-                    onToggle = { task -> viewModel.toggleTask(task.id, !task.completed) },
+                    onToggle = { task ->
+                        if (task.completed) {
+                            viewModel.toggleTask(task.id, false)
+                        } else {
+                            taskToComplete = task
+                        }
+                    },
                     onTaskClick = { selectedTask = it }
                 )
             }
@@ -237,8 +261,13 @@ fun TaskItem(task: Task, members: List<User>, onToggle: () -> Unit, onClick: () 
                         fontWeight = FontWeight.Medium
                     )
                 } else if (task.completed && task.completedAt != null) {
+                    val timeStr = task.timeSpentMinutes?.let { minutes ->
+                        val h = minutes / 60
+                        val m = minutes % 60
+                        if (h > 0) " (${h}h ${m}m)" else " (${m}m)"
+                    } ?: ""
                     Text(
-                        text = "Completed: ${dateFormat.format(task.completedAt)}",
+                        text = "Completed: ${dateFormat.format(task.completedAt)}$timeStr",
                         style = MaterialTheme.typography.labelSmall,
                         color = KippoColors.Teal,
                         fontWeight = FontWeight.Medium
@@ -343,7 +372,7 @@ fun WeeklyTaskView(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
+                .padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { weekOffset-- }, modifier = Modifier.size(32.dp)) {
@@ -518,6 +547,12 @@ fun TaskDetailDialog(task: Task, members: List<User>, onDismiss: () -> Unit, onE
                 if (task.completed) {
                     DetailRow(label = "Completed by:", value = completedByUser?.username ?: "Unknown")
                     DetailRow(label = "Completed on:", value = task.completedAt?.let { dateFormat.format(it) } ?: "N/A")
+                    task.timeSpentMinutes?.let { minutes ->
+                        val h = minutes / 60
+                        val m = minutes % 60
+                        val timeStr = if (h > 0) "${h}h ${m}m" else "$m minutes"
+                        DetailRow(label = "Time spent:", value = timeStr)
+                    }
                 }
             }
         },
@@ -535,6 +570,127 @@ fun DetailRow(label: String, value: String) {
         Text(text = label, fontWeight = FontWeight.Bold, modifier = Modifier.width(100.dp), style = MaterialTheme.typography.bodySmall)
         Text(text = value, style = MaterialTheme.typography.bodySmall, color = Color.DarkGray)
     }
+}
+
+@Composable
+fun CompleteTaskDialog(
+    task: Task,
+    onDismiss: () -> Unit,
+    onConfirm: (Int?) -> Unit
+) {
+    var hours by remember { mutableIntStateOf(0) }
+    var minutes by remember { mutableIntStateOf(15) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Complete Task", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("How much time did you spend on '${task.title}'?")
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Hours Picker
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(onClick = { if (hours < 23) hours++ }) {
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = null, tint = KippoColors.Teal)
+                        }
+                        Surface(
+                            color = KippoColors.Teal.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.size(60.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = hours.toString().padStart(2, '0'),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = KippoColors.Teal
+                                )
+                            }
+                        }
+                        IconButton(onClick = { if (hours > 0) hours-- }) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = KippoColors.Teal)
+                        }
+                        Text("hours", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                    
+                    Text(
+                        ":",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 24.dp),
+                        color = KippoColors.Teal
+                    )
+                    
+                    // Minutes Picker
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(onClick = { if (minutes < 59) minutes++ else minutes = 0 }) {
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = null, tint = KippoColors.Teal)
+                        }
+                        Surface(
+                            color = KippoColors.Teal.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.size(60.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = minutes.toString().padStart(2, '0'),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = KippoColors.Teal
+                                )
+                            }
+                        }
+                        IconButton(onClick = { if (minutes > 0) minutes-- else minutes = 59 }) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = KippoColors.Teal)
+                        }
+                        Text("min", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                    Text(
+                        text = "Total: ${if (hours > 0) "${hours}h " else ""}${minutes}min",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = KippoColors.DarkText
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val totalMinutes = (hours * 60) + minutes
+                    onConfirm(totalMinutes)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = KippoColors.Teal),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("MARK AS DONE", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text("CANCEL", color = Color.Gray)
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(24.dp)
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

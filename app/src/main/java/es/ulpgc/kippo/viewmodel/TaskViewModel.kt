@@ -85,14 +85,14 @@ class TaskViewModel(
         }
     }
 
-    fun toggleTask(taskId: String, completed: Boolean) {
+    fun toggleTask(taskId: String, completed: Boolean, timeSpent: Int? = null) {
         val userId = auth.currentUser?.uid ?: return
         if (currentHouseholdId.isBlank()) return
 
         val task = _tasks.value.find { it.id == taskId } ?: return
 
         viewModelScope.launch {
-            taskRepository.toggleTaskCompletion(currentHouseholdId, task, completed, userId)
+            taskRepository.toggleTaskCompletion(currentHouseholdId, task, completed, userId, timeSpent)
                 .onSuccess {
                     if (completed) ToastManager.showSuccess("Task completed +${task.points} pts")
                     else ToastManager.showInfo("Task reopened")
