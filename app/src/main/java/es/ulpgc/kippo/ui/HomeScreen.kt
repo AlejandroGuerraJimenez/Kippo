@@ -3,13 +3,15 @@ package es.ulpgc.kippo.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,8 +36,11 @@ import es.ulpgc.kippo.ui.components.KippoScaffold
 import es.ulpgc.kippo.util.ImageUtils
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.util.Locale
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,7 +126,7 @@ fun HomeScreen(
                     onRewardsClick = onNavigateToRewards
                 )
                 Spacer(modifier = Modifier.height(20.dp))
-                CalendarWidget(pendingDates = pendingTaskDates)
+                CalendarWidget(allTasks = allTasks)
             } else if (currentSectionState.value == es.ulpgc.kippo.ui.components.BottomNavDestination.PROFILE) {
                 ProfileSection(
                     name = profileName,
@@ -163,7 +168,7 @@ fun ActionButtonsRow(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.TaskAlt, null, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text("TASKS", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                    Text(text = "TASKS", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                 }
             }
 
@@ -176,7 +181,7 @@ fun ActionButtonsRow(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.AccountBalanceWallet, null, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text("EXPENSES", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                    Text(text = "EXPENSES", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                 }
             }
         }
@@ -265,47 +270,206 @@ fun PickerCard(title: String, desc: String, color: Color, icon: androidx.compose
 }
 
 @Composable
-fun CalendarWidget(pendingDates: Set<LocalDate> = emptySet()) {
+fun CalendarWidget(allTasks: List<Task>) {
     val today = remember { LocalDate.now() }
     var displayedMonth by remember { mutableStateOf(YearMonth.now()) }
+    var selectedDate by remember { mutableStateOf<LocalDate?>(today) }
+
     val monthName = displayedMonth.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH).replaceFirstChar { it.uppercase() }
     val firstDayOfMonth = displayedMonth.atDay(1)
     val startOffset = (firstDayOfMonth.dayOfWeek.value - 1)
     val daysInMonth = displayedMonth.lengthOfMonth()
     val dayLabels = listOf("M", "T", "W", "T", "F", "S", "S")
 
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { displayedMonth = displayedMonth.minusMonths(1) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.ChevronLeft, null, tint = KippoColors.Teal) }
-                Text(text = "$monthName ${displayedMonth.year}", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = KippoColors.DarkText, fontSize = 15.sp)
-                IconButton(onClick = { displayedMonth = displayedMonth.plusMonths(1) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.ChevronRight, null, tint = KippoColors.Teal) }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth()) { dayLabels.forEach { Text(text = it, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = KippoColors.DarkText.copy(alpha = 0.4f)) } }
-            Spacer(Modifier.height(4.dp))
-            val rows = (startOffset + daysInMonth + 6) / 7
-            for (row in 0 until rows) {
+    fun Date.toLocalDate(): LocalDate =
+        toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+
+    fun isTaskOnDate(task: Task, date: LocalDate): Boolean {
+        if (task.completed) return false
+        
+        // Exact due date match
+        val dueDate = task.dueDate?.toLocalDate()
+        if (dueDate == date) return true
+        
+        // Recurrence logic
+        val start = task.createdAt?.toLocalDate() ?: task.dueDate?.toLocalDate() ?: return false
+        if (date < start) return false
+
+        return when (task.recurrence) {
+            "daily" -> true
+            "weekly" -> date.dayOfWeek == start.dayOfWeek
+            "biweekly" -> ChronoUnit.DAYS.between(start, date) % 14 == 0L
+            "monthly" -> date.dayOfMonth == start.dayOfMonth
+            else -> false
+        }
+    }
+
+    val tasksByDate = remember(allTasks, displayedMonth) {
+        (1..daysInMonth).associate { d ->
+            val date = displayedMonth.atDay(d)
+            date to allTasks.filter { isTaskOnDate(it, date) }
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { displayedMonth = displayedMonth.minusMonths(1) }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.ChevronLeft, null, tint = KippoColors.Teal)
+                    }
+                    Text(
+                        text = "$monthName ${displayedMonth.year}",
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = KippoColors.DarkText,
+                        fontSize = 15.sp
+                    )
+                    IconButton(onClick = { displayedMonth = displayedMonth.plusMonths(1) }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.ChevronRight, null, tint = KippoColors.Teal)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    for (col in 0 until 7) {
-                        val day = row * 7 + col - startOffset + 1
-                        val date = if (day in 1..daysInMonth) displayedMonth.atDay(day) else null
-                        Box(modifier = Modifier.weight(1f).aspectRatio(1f).padding(2.dp), contentAlignment = Alignment.Center) {
-                            if (date != null) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Box(modifier = Modifier.size(28.dp).then(if (date == today) Modifier.background(KippoColors.Teal, CircleShape) else Modifier), contentAlignment = Alignment.Center) {
-                                        Text(text = day.toString(), fontSize = 13.sp, color = if (date == today) Color.White else KippoColors.DarkText)
+                    dayLabels.forEach {
+                        Text(
+                            text = it,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = KippoColors.DarkText.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                val rows = (startOffset + daysInMonth + 6) / 7
+                for (row in 0 until rows) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        for (col in 0 until 7) {
+                            val day = row * 7 + col - startOffset + 1
+                            val date = if (day in 1..daysInMonth) displayedMonth.atDay(day) else null
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .padding(2.dp)
+                                    .clip(CircleShape)
+                                    .clickable(enabled = date != null) { selectedDate = date },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (date != null) {
+                                    val dayTasks = tasksByDate[date] ?: emptyList()
+                                    val isSelected = date == selectedDate
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .background(
+                                                when {
+                                                    date == today -> KippoColors.Teal
+                                                    isSelected -> KippoColors.Teal.copy(alpha = 0.2f)
+                                                    else -> Color.Transparent
+                                                },
+                                                CircleShape
+                                            )
+                                            .then(if (isSelected && date != today) Modifier.border(1.5.dp, KippoColors.Teal, CircleShape) else Modifier),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = day.toString(),
+                                            fontSize = 13.sp,
+                                            fontWeight = if (date == today || isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (date == today) Color.White else KippoColors.DarkText
+                                        )
                                     }
-                                    if (date in pendingDates) Box(modifier = Modifier.size(4.dp).background(if (date < today) Color(0xFFE53935) else KippoColors.Teal, CircleShape))
+                                    if (dayTasks.isNotEmpty()) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(4.dp)
+                                                .align(Alignment.BottomCenter)
+                                                .offset(y = (-4).dp)
+                                                .background(
+                                                    if (date < today) Color(0xFFE53935) else KippoColors.Teal,
+                                                    CircleShape
+                                                )
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+
+        // Show tasks for selected date
+        selectedDate?.let { date ->
+            val dayTasks = if (date.monthValue == displayedMonth.monthValue && date.year == displayedMonth.year) {
+                tasksByDate[date] ?: emptyList()
+            } else {
+                allTasks.filter { isTaskOnDate(it, date) }
+            }
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val dateLabel = if (date == today) "Today's Tasks" else "Tasks for ${date.dayOfMonth} ${date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
+                Text(
+                    text = dateLabel,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = KippoColors.DarkText
+                )
+                
+                if (dayTasks.isEmpty()) {
+                    Text(
+                        "No tasks scheduled.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                } else {
+                    dayTasks.forEach { task ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Circle,
+                                contentDescription = null,
+                                tint = if (date < today) Color(0xFFE53935) else KippoColors.Teal,
+                                modifier = Modifier.size(8.dp)
+                            )
+                            Text(
+                                text = task.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = KippoColors.DarkText
+                            )
+                            if (task.recurrence != "none") {
+                                Spacer(Modifier.weight(1f))
+                                Icon(Icons.Default.Repeat, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+}
 
 @Composable
 fun KippoTopBar(householdName: String, householdImageBase64: String? = null, onProfileClick: () -> Unit) {
@@ -337,10 +501,6 @@ fun KippoTopBar(householdName: String, householdImageBase64: String? = null, onP
         Column(modifier = Modifier.weight(1f).clickable { onProfileClick() }) {
             Text(text = householdName, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = KippoColors.DarkText)
             Text(text = "Kippo Household", fontSize = 13.sp, color = KippoColors.DarkText.copy(alpha = 0.5f))
-        }
-        Box(contentAlignment = Alignment.TopEnd) {
-            Icon(Icons.Outlined.Notifications, null, tint = KippoColors.DarkText, modifier = Modifier.size(28.dp))
-            Surface(color = Color(0xFFE57373), shape = CircleShape, modifier = Modifier.size(10.dp).offset(x = (-2).dp, y = (2).dp), border = BorderStroke(1.5.dp, KippoColors.Background)) {}
         }
     }
 }
